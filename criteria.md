@@ -42,62 +42,53 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
 
-<!-- Your criterion. It must name a number. -->
+## 1. False Positives
 
-
+Of 10 human-written calibration texts, no more than 2 may receive the `Potentially AI-generated` label in each of the three evaluation trials.
 
 **Why this target:**
 
-
+A false accusation can harm a real writer's reputation. I allow at most 2 errors in 10 because avoiding false accusations matters more than catching every AI-generated text.
 
 ---
 
-## 2.
+## 2. Score Spread
 
-<!-- Your criterion. -->
-
-
+Across 5 clearly AI-generated texts and 5 clearly human-written texts, the average AI-likeness score for the AI texts must be at least 0.20 higher in each of the three evaluation trials.
 
 **Why this target:**
 
-
+The scores should show a meaningful difference between the two groups without requiring perfect detection. A 0.20 gap is a challenging but reasonable initial target.
 
 ---
 
-## 3.
+## 3. Label Coverage
 
-<!-- Your criterion. -->
-
-
+Each of the three labels—`Likely human-written`, `Insufficient evidence`, and `Potentially AI-generated`—must appear at least once across the calibration set in each evaluation trial.
 
 **Why this target:**
 
-
+Every label should be reachable. If a label never appears, the scoring thresholds may be poorly chosen or that outcome may be impossible to produce.
 
 ---
 
-## 4.
+## 4. Appeal Path
 
-<!-- Your criterion. -->
-
-
+When an appeal is submitted for an existing content_id with a non-empty reasoning field, the API must return HTTP 201, record the appeal in the audit log with status under_review, and preserve the original decision. An appeal for a nonexistent content_id must return HTTP 404.
 
 **Why this target:**
 
-
+Writers need a traceable way to challenge incorrect results. Recording the appeal as a separate audit entry preserves the original decision and makes the review process verifiable.
 
 ---
 
-## 5.
-
-<!-- Your criterion. -->
-
-
+## 5. Bad Input
+Requests with missing `text`, empty or whitespace-only `text` must return HTTP `422`. Requests with text exceeding the maximum length of 10,000 characters must return HTTP `413`. The service must remain running after each rejected request.
 
 **Why this target:**
 
+Invalid input should be rejected predictably without breaking the API. Specific status codes make errors easier to test and help developers understand why a request failed.
 
 
 ---

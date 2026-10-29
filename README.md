@@ -122,13 +122,18 @@
      diagnostics. -->
 
 ```bash
-$ curl -X POST http://127.0.0.1:5000/submit \
-  -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+$ curl -X POST http://127.0.0.1:5000/submit   -H "Content-Type: application/json"   -d '{"text": "Artificial intelligence is changing many industries. Businesses use these systems to automate repetitive tasks and improve efficiency. Organizations must consider accuracy, privacy, and responsible use.", "creator_id": "test-user"}'
 ```
 
 ```json
-
+{
+  "confidence": 0.5,
+  "content_id": "fa779b28-78e5-44f9-ab08-3b8dde384e9d",
+  "guess": "model_signal",
+  "label": "pending",
+  "model_score": 0.538,
+  "style_score": 0.5
+}
 ```
 
 **An appeal**
@@ -150,9 +155,45 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
 ```
 
 ```json
-
+{
+  "count": 3,
+  "entries": [
+    {
+      "combined_score": null,
+      "content_id": "c9fbedea-c5f6-43ad-8bff-f7eac8a73d21",
+      "creator_id": "test-user",
+      "guess": "model_signal",
+      "label": "pending",
+      "model_score": 0.6007,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-29T07:26:41+00:00"
+    },
+    {
+      "combined_score": null,
+      "content_id": "49ade757-b338-4329-a23c-120354a4bafb",
+      "creator_id": "test-user",
+      "guess": "model_signal",
+      "label": "pending",
+      "model_score": 0.733,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-29T07:33:38+00:00"
+    },
+    {
+      "combined_score": null,
+      "content_id": "fa779b28-78e5-44f9-ab08-3b8dde384e9d",
+      "creator_id": "test-user",
+      "guess": "model_signal",
+      "label": "pending",
+      "model_score": 0.538,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-29T08:02:01+00:00"
+    }
+  ]
+}
 ```
-
 ---
 
 ## How I Used AI

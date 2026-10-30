@@ -55,37 +55,73 @@
 
 **What it measures:**
 
+The model signal uses GPT-2 to calculate the perplexity of the submitted text. Perplexity measures how predictable a sequence of words is to a language model. The implementation converts perplexity into a score from 0 to 1. A higher score means the text is more predictable to GPT-2 and is treated by this heuristic as more AI-like.
+
 **Why that might differ between human and AI writing:**
 
+AI-generated text often follows common language patterns and uses statistically likely word sequences, which can make it more predictable to a language model. Human writing may contain more unusual word choices, personal phrasing, or unexpected transitions, which can make it less predictable. However, this is only a tendency: human writing can also be highly predictable, and AI writing can be made less predictable through editing.
+
 **What it can't see:**
+
+The model signal cannot identify the author or establish whether a person or an AI system actually wrote the text. It cannot see the writer's identity, intent, drafting process, or use of AI tools. It only measures how predictable the text is to GPT-2. Short, conventional, or formal human writing may receive a high AI-like score, while edited or unusual AI-generated text may receive a lower score. The score is therefore a heuristic, not a probability or proof of authorship.
 
 ### Signal two — the style signal
 
 **What it measures:**
 
+The style signal measures statistical features of the text's structure and vocabulary rather than its meaning. The current implementation uses two measures:
+
+- **Sentence-length spread:** Calculates the standard deviation of sentence word counts divided by their mean. It measures how much sentence lengths vary relative to the average.
+- **Type-token ratio:** Calculates the number of unique words divided by the total number of words. It measures vocabulary diversity.
+
+The implementation converts these measures into two component scores and averages them. Lower sentence-length variation and lower vocabulary diversity increase the AI-likelihood score. Punctuation density is also calculated (selected punctuation marks divided by total characters), but it is not currently included in `style_signal()`.
+
 **Why that might differ between human and AI writing:**
+
+AI-generated prose may use more consistent sentence lengths and repeat a narrower range of vocabulary. Human writing may be less uniform, with a wider mix of short and long sentences and more varied word choices. Sentence-length spread and type-token ratio can therefore provide clues about writing style. These are tendencies, not dependable distinctions: humans can write uniformly, and AI can produce varied sentence lengths and vocabulary.
 
 **What it can't see:**
 
-### The combining rule
+The style signal cannot understand the text's meaning, context, factual accuracy, or the author's identity. It cannot determine whether AI was used. It only measures surface-level patterns. Those patterns can be changed without changing the underlying ideas—for example, by adding typos, splitting or combining sentences, repeating or replacing words, or inserting quotations. Such changes can manipulate the score, which is a key blind spot relevant to Unit 8's attack set. The measures can also be unstable on short texts; for example, a one-sentence submission has a sentence-length spread of 0. The current score also excludes punctuation density, so punctuation changes alone do not affect `style_signal()`.
 
-<!-- Write the rule in words, then give the numbers. What happens when the two
-     signals disagree? -->
+### The combining rule
 
 **The rule:**
 
+Provenance Guard uses a weighted average to combine the model signal and style signal. When the two signals disagree, the weighted average balances their scores, giving more influence to the model signal.
+
 **The numbers:**
+- Model signal: 70%
+- Style signal: 30%
+
+`combined_score = (0.70 * model_score) + (0.30 * style_score)`
 
 **Where it lives:** `scoring.py::combine_signals`
 
-<!-- ⚠️ The grader checks your code against that line. If your rule lives
-     somewhere else, say where. -->
-
 **A case where my two signals split, and what my rule does with it:**
 
+In testing, the clearly AI-written sample received a model score of 0.7581 and a style score of 0.4928. The clearly human-written sample received a model score of 0.8442 and a style score of 0.4916.
 
+The model signal rated the human-written sample as more AI-like, while the style signal gave nearly identical scores to both samples. Our weighted average gives 70% weight to the model signal and 30% to the style signal, so the combined score follows the model signal more strongly while still incorporating the style signal.
 
 ---
+### Calibration Results
+
+During calibration, both signals were tested against clearly AI-written, clearly human-written, formal human, and lightly edited AI text.
+
+| Test input | Model signal | Style signal |
+|---|---:|---:|
+| Clearly AI | 0.8479 | 0.5551 |
+| Clearly human | 0.8418 | 0.4678 |
+| Formal human | 0.8838 | 0.4375 |
+| Lightly edited AI | 0.7907 | 0.4417 |
+
+**What I discovered:**
+
+Neither signal consistently distinguished human-written text from AI-generated text. The model signal assigned the formal human sample the highest AI-likelihood score. The clearly AI and clearly human samples also received very similar model scores.
+
+The style signal produced overlapping scores across the test categories. This demonstrates that the signals are imperfect heuristics and that combining them does not automatically eliminate false positives.
+
 
 ## Label Variants
 
@@ -194,6 +230,26 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
   ]
 }
 ```
+
+```json
+{
+  "count": 1,
+  "entries": [
+    {
+      "combined_score": 0.70688,
+      "content_id": "e48f16ad-97ce-4afb-8ba4-84580bf1707d",
+      "creator_id": "test_user",
+      "guess": "model_signal",
+      "label": "pending",
+      "model_score": 0.7884,
+      "status": "decided",
+      "style_score": 0.5166666666666666,
+      "timestamp": "2026-10-30T07:07:41+00:00"
+    }
+  ]
+}
+```
+
 ---
 
 ## How I Used AI

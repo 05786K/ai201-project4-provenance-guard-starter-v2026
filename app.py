@@ -219,9 +219,8 @@ def submit():
         style_score
     )
 
-    guess = "model_signal"
+    guess, label = scoring.score_to_label(combined_score)
     confidence = 0.5
-    label = "pending"
 
 
     audit.log_decision(
@@ -268,13 +267,30 @@ def appeal():
     """
     payload = request.get_json(silent=True) or {}
 
-    # TODO: delete this and build the route.
-    return jsonify({
-        "error": "not_implemented",
-        "message": "POST /appeal isn't built yet — see the TODO in app.py.",
-        "you_sent": payload,
-    }), 501
+    content_id = payload.get("content_id", "")
+    reasoning = payload.get("reasoning", "")
 
+    entries = audit.entries_for(content_id)
+
+    if not entries:
+        return jsonify({
+            "error": "not_found",
+            "message": "No submission found with that content_id."
+        }), 404
+
+    creator_id = entries[0].get("creator_id", "")
+
+    appeal_entry = audit.log_appeal(
+        content_id=content_id,
+        creator_id=creator_id,
+        reasoning=reasoning
+    )
+
+    return jsonify({
+        "message": "Your appeal has been submitted and is under review.",
+        "content_id": content_id,
+        "status": appeal_entry["status"]
+    }), 200
 
 # ── Already works ─────────────────────────────────────────────────────────────
 

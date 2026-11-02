@@ -122,7 +122,6 @@ Neither signal consistently distinguished human-written text from AI-generated t
 
 The style signal produced overlapping scores across the test categories. This demonstrates that the signals are imperfect heuristics and that combining them does not automatically eliminate false positives.
 
-
 ## Label Variants
 
 <!-- The exact text of all three labels, as a reader would see them, and the
@@ -132,14 +131,13 @@ The style signal produced overlapping scores across the test categories. This de
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00–0.35 | We think this text was probably written by a person. However, this result cannot guarantee who wrote it. |
+| unsure | Above 0.35 and below 0.65 | We cannot confidently determine whether this text was written by a person or AI. |
+| high-confidence AI | 0.65–1.00 | This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used. |
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
+
+I chose wording that communicates uncertainty without accusing the writer of using AI. The person reading the result may have written every word themselves. The system only identifies patterns in writing; it cannot prove who wrote the text.
 
 
 
@@ -177,64 +175,49 @@ $ curl -X POST http://127.0.0.1:5000/submit   -H "Content-Type: application/json
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+  -d '{"content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe", "reasoning": "I wrote this text myself and believe the detector incorrectly classified it."}'
 ```
 
 ```json
-
+{
+  "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
+  "message": "Your appeal has been submitted and is under review.",
+  "status": "under_review"
+}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl "http://127.0.0.1:5000/log?limit=10"
 ```
 
 ```json
 {
-  "count": 3,
+  "count": 10,
   "entries": [
     {
-      "combined_score": null,
-      "content_id": "c9fbedea-c5f6-43ad-8bff-f7eac8a73d21",
-      "creator_id": "test-user",
+      "combined_score": 0.70688,
+      "content_id": "746760e5-4535-4969-a4ec-dc33a170e171",
+      "creator_id": "test_user",
       "guess": "model_signal",
       "label": "pending",
-      "model_score": 0.6007,
+      "model_score": 0.7884,
       "status": "decided",
       "style_score": 0.5,
-      "timestamp": "2026-10-29T07:26:41+00:00"
+      "timestamp": "2026-10-30T07:03:19+00:00"
     },
     {
-      "combined_score": null,
-      "content_id": "49ade757-b338-4329-a23c-120354a4bafb",
-      "creator_id": "test-user",
+      "combined_score": 0.70688,
+      "content_id": "b3fa44e0-4da7-41f7-9838-e4e0dcb6e304",
+      "creator_id": "test_user",
       "guess": "model_signal",
       "label": "pending",
-      "model_score": 0.733,
+      "model_score": 0.7884,
       "status": "decided",
       "style_score": 0.5,
-      "timestamp": "2026-10-29T07:33:38+00:00"
+      "timestamp": "2026-10-30T07:05:32+00:00"
     },
-    {
-      "combined_score": null,
-      "content_id": "fa779b28-78e5-44f9-ab08-3b8dde384e9d",
-      "creator_id": "test-user",
-      "guess": "model_signal",
-      "label": "pending",
-      "model_score": 0.538,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-29T08:02:01+00:00"
-    }
-  ]
-}
-```
-
-```json
-{
-  "count": 1,
-  "entries": [
     {
       "combined_score": 0.70688,
       "content_id": "e48f16ad-97ce-4afb-8ba4-84580bf1707d",
@@ -245,10 +228,83 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
       "status": "decided",
       "style_score": 0.5166666666666666,
       "timestamp": "2026-10-30T07:07:41+00:00"
+    },
+    {
+      "combined_score": 0.24764999999999998,
+      "content_id": "71bc2c39-228f-498a-9538-fd9f684403e6",
+      "creator_id": "browser-test",
+      "guess": "model_signal",
+      "label": "pending",
+      "model_score": 0.1395,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-30T07:31:32+00:00"
+    },
+    {
+      "combined_score": 0.24764999999999998,
+      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
+      "creator_id": "test_user",
+      "guess": "human",
+      "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
+      "model_score": 0.1395,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-30T07:45:28+00:00"
+    },
+    {
+      "combined_score": 0.40430999999999995,
+      "content_id": "ab55ebf9-b43c-4b36-94a5-e52c2ade5afa",
+      "creator_id": "test_user",
+      "guess": "unsure",
+      "label": "We cannot confidently determine whether this text was written by a person or AI.",
+      "model_score": 0.3633,
+      "status": "decided",
+      "style_score": 0.5,
+      "timestamp": "2026-10-30T08:26:47+00:00"
+    },
+    {
+      "combined_score": 0.40390390639222823,
+      "content_id": "cc2fb806-718a-4353-89ec-08fede9f0182",
+      "creator_id": "test_user",
+      "guess": "unsure",
+      "label": "We cannot confidently determine whether this text was written by a person or AI.",
+      "model_score": 0.3723,
+      "status": "decided",
+      "style_score": 0.4776463546407607,
+      "timestamp": "2026-10-30T08:27:03+00:00"
+    },
+    {
+      "combined_score": 0.9706377777777777,
+      "content_id": "d372470c-aa51-4951-be0e-8c3e0552310b",
+      "creator_id": "test_user",
+      "guess": "ai",
+      "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+      "model_score": 0.9898,
+      "status": "decided",
+      "style_score": 0.9259259259259259,
+      "timestamp": "2026-10-30T08:27:28+00:00"
+    },
+    {
+      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
+      "creator_id": "test_user",
+      "event": "appeal",
+      "reasoning": "I wrote this text myself and believe the detector incorrectly classified it.",
+      "status": "under_review",
+      "timestamp": "2026-11-02T08:23:25+00:00"
+    },
+    {
+      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
+      "creator_id": "test_user",
+      "event": "appeal",
+      "reasoning": "I wrote this text myself and believe the detector incorrectly classified it.",
+      "status": "under_review",
+      "timestamp": "2026-11-02T08:31:27+00:00"
     }
   ]
 }
 ```
+
+
 
 ---
 

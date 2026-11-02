@@ -35,21 +35,19 @@
 <!-- ═══════════════════════ UNIT 7 — THE BUILD ═══════════════════════ -->
 
 ## What This Does
+Provenance Guard is a writing assessment tool that analyzes submitted text and assigns one of three labels: `human`, `unsure`, or `ai`. The submission follows this path:
 
-<!-- The path a submission takes, from arriving to the label a reader sees.
-     Six or seven steps — this is the trace you wrote in Milestone 1. -->
-
-
+1. **API (`app.py`)** — Receives a writing submission through the `/submit` endpoint and processes the request.
+2. **Detector (`detector.py`)** — Uses a local GPT-2 language model to measure text predictability and converts perplexity into an AI-likeness score.
+3. **Stylometry (`stylometry.py`)** — Measures writing characteristics, including sentence-length variation, vocabulary diversity, and punctuation density.
+4. **Scoring (`scoring.py`)** — Combines the model signal (70%) and style signal (30%) into one overall score.
+5. **Confidence field** — Returns a confidence value with the assessment. The current value is a placeholder (`0.5`), not a calibrated estimate of reliability.
+6. **Labeling (`scoring.py`)** — Applies the configured thresholds to assign one of three labels: `human`, `unsure`, or `ai`.
+7. **Response and appeal (`app.py`, `audit.py`)** — Returns the assessment and its explanation, records the decision in an append-only audit log, and provides an appeal endpoint so writers can challenge an assessment.
 
 ---
 
 ## Signals and Scoring
-
-<!-- For each signal: what property it measures, why that might differ between
-     human and AI writing, and WHAT IT CAN'T SEE.
-
-     The blind spot is not optional. If you can't name it you don't understand
-     the signal yet — and unit 8's attack set is built out of blind spots. -->
 
 ### Signal one — the model signal
 
@@ -150,159 +148,62 @@ I chose wording that communicates uncertainty without accusing the writer of usi
 
 **A submission**
 
-<!-- The response needs content_id, guess, confidence, label, AND both
-     signal scores - model_score and style_score. Unit 8's tools read those
-     two off the response, so leaving them out costs you next unit's
-     diagnostics. -->
-
 ```bash
-$ curl -X POST http://127.0.0.1:5000/submit   -H "Content-Type: application/json"   -d '{"text": "Artificial intelligence is changing many industries. Businesses use these systems to automate repetitive tasks and improve efficiency. Organizations must consider accuracy, privacy, and responsible use.", "creator_id": "test-user"}'
+$ curl -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d '{"text": "Artificial intelligence is changing many industries. Businesses use these systems to automate repetitive tasks and improve efficiency. Organizations must consider accuracy, privacy, and responsible use.", "creator_id": "test-user"}'
 ```
 
 ```json
 {
+  "combined_score": 0.5038079592741808,
   "confidence": 0.5,
-  "content_id": "fa779b28-78e5-44f9-ab08-3b8dde384e9d",
-  "guess": "model_signal",
-  "label": "pending",
+  "content_id": "a1206013-0c2a-45a0-a7c4-ed1ec4bedafb",
+  "guess": "unsure",
+  "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "model_score": 0.538,
-  "style_score": 0.5
+  "style_score": 0.424026530913936
 }
 ```
 
-**An appeal**
+**An appeal** (against the same `content_id`)
 
 ```bash
-$ curl -X POST http://127.0.0.1:5000/appeal \
-  -H "Content-Type: application/json" \
-  -d '{"content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe", "reasoning": "I wrote this text myself and believe the detector incorrectly classified it."}'
+$ curl -X POST http://127.0.0.1:5000/appeal -H "Content-Type: application/json" -d '{"content_id": "a1206013-0c2a-45a0-a7c4-ed1ec4bedafb", "reasoning": "I wrote this text myself and believe the detector incorrectly classified it."}'
 ```
 
 ```json
 {
-  "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
+  "content_id": "a1206013-0c2a-45a0-a7c4-ed1ec4bedafb",
   "message": "Your appeal has been submitted and is under review.",
   "status": "under_review"
 }
 ```
 
-**What the log shows afterwards**
-
-```bash
-$ curl "http://127.0.0.1:5000/log?limit=10"
-```
+**What the log shows afterwards** (`GET /log`, entries for this `content_id`)
 
 ```json
-{
-  "count": 10,
-  "entries": [
-    {
-      "combined_score": 0.70688,
-      "content_id": "746760e5-4535-4969-a4ec-dc33a170e171",
-      "creator_id": "test_user",
-      "guess": "model_signal",
-      "label": "pending",
-      "model_score": 0.7884,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-30T07:03:19+00:00"
-    },
-    {
-      "combined_score": 0.70688,
-      "content_id": "b3fa44e0-4da7-41f7-9838-e4e0dcb6e304",
-      "creator_id": "test_user",
-      "guess": "model_signal",
-      "label": "pending",
-      "model_score": 0.7884,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-30T07:05:32+00:00"
-    },
-    {
-      "combined_score": 0.70688,
-      "content_id": "e48f16ad-97ce-4afb-8ba4-84580bf1707d",
-      "creator_id": "test_user",
-      "guess": "model_signal",
-      "label": "pending",
-      "model_score": 0.7884,
-      "status": "decided",
-      "style_score": 0.5166666666666666,
-      "timestamp": "2026-10-30T07:07:41+00:00"
-    },
-    {
-      "combined_score": 0.24764999999999998,
-      "content_id": "71bc2c39-228f-498a-9538-fd9f684403e6",
-      "creator_id": "browser-test",
-      "guess": "model_signal",
-      "label": "pending",
-      "model_score": 0.1395,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-30T07:31:32+00:00"
-    },
-    {
-      "combined_score": 0.24764999999999998,
-      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
-      "creator_id": "test_user",
-      "guess": "human",
-      "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
-      "model_score": 0.1395,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-30T07:45:28+00:00"
-    },
-    {
-      "combined_score": 0.40430999999999995,
-      "content_id": "ab55ebf9-b43c-4b36-94a5-e52c2ade5afa",
-      "creator_id": "test_user",
-      "guess": "unsure",
-      "label": "We cannot confidently determine whether this text was written by a person or AI.",
-      "model_score": 0.3633,
-      "status": "decided",
-      "style_score": 0.5,
-      "timestamp": "2026-10-30T08:26:47+00:00"
-    },
-    {
-      "combined_score": 0.40390390639222823,
-      "content_id": "cc2fb806-718a-4353-89ec-08fede9f0182",
-      "creator_id": "test_user",
-      "guess": "unsure",
-      "label": "We cannot confidently determine whether this text was written by a person or AI.",
-      "model_score": 0.3723,
-      "status": "decided",
-      "style_score": 0.4776463546407607,
-      "timestamp": "2026-10-30T08:27:03+00:00"
-    },
-    {
-      "combined_score": 0.9706377777777777,
-      "content_id": "d372470c-aa51-4951-be0e-8c3e0552310b",
-      "creator_id": "test_user",
-      "guess": "ai",
-      "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
-      "model_score": 0.9898,
-      "status": "decided",
-      "style_score": 0.9259259259259259,
-      "timestamp": "2026-10-30T08:27:28+00:00"
-    },
-    {
-      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
-      "creator_id": "test_user",
-      "event": "appeal",
-      "reasoning": "I wrote this text myself and believe the detector incorrectly classified it.",
-      "status": "under_review",
-      "timestamp": "2026-11-02T08:23:25+00:00"
-    },
-    {
-      "content_id": "0ee9f54a-b3c8-4a43-b030-5423676e7efe",
-      "creator_id": "test_user",
-      "event": "appeal",
-      "reasoning": "I wrote this text myself and believe the detector incorrectly classified it.",
-      "status": "under_review",
-      "timestamp": "2026-11-02T08:31:27+00:00"
-    }
-  ]
-}
+[
+  {
+    "combined_score": 0.5038079592741808,
+    "content_id": "a1206013-0c2a-45a0-a7c4-ed1ec4bedafb",
+    "creator_id": "test-user",
+    "guess": "unsure",
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "model_score": 0.538,
+    "status": "decided",
+    "style_score": 0.424026530913936,
+    "timestamp": "2026-11-02T08:59:49+00:00"
+  },
+  {
+    "content_id": "a1206013-0c2a-45a0-a7c4-ed1ec4bedafb",
+    "creator_id": "test-user",
+    "event": "appeal",
+    "reasoning": "I wrote this text myself and believe the detector incorrectly classified it.",
+    "status": "under_review",
+    "timestamp": "2026-11-02T08:59:52+00:00"
+  }
+]
 ```
+
 
 
 
@@ -311,16 +212,18 @@ $ curl "http://127.0.0.1:5000/log?limit=10"
 ## How I Used AI
 
 **Moment 1**
+- *What I asked for:* Help understanding how to combine the GPT-2 model signal with the stylometric signal into one overall score.
+- *What came back:* Guidance on using a weighted average to combine the two signals, with the model signal weighted at 70% and the style signal at 30%.
+- *What I changed:* I implemented the combining logic in `scoring.py` using `combine_signals()` and stored the weights in `config.py`. I then tested the combined scoring behavior with different writing samples.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+### Moment 2
 
 **Moment 2**
+- *What I asked for:* Help implementing the classification logic that converts the combined score into the required labels.
+- *What came back:* Guidance on using score thresholds to determine which label should be assigned and on providing an explanation for each result.
+- *What I changed:* I implemented `score_to_label()` in `scoring.py`, using the provided labels: `human`, `unsure`, and `ai`. I configured the thresholds in `config.py` and tested whether all three labels could be reached.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 

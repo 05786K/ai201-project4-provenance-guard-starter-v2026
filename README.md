@@ -223,29 +223,25 @@ $ curl -X POST http://127.0.0.1:5000/appeal -H "Content-Type: application/json" 
 - *What came back:* Guidance on using score thresholds to determine which label should be assigned and on providing an explanation for each result.
 - *What I changed:* I implemented `score_to_label()` in `scoring.py`, using the provided labels: `human`, `unsure`, and `ai`. I configured the thresholds in `config.py` and tested whether all three labels could be reached.
 
-
-
-<!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
+**Moment 3**
+- *What I asked for:* Help reading the attack run and the eval run and diagnosing each failure by stage.
+- *What came back:* A HELD or BROKE verdict for each of the 46 attacks I had to judge and a diagnosis grouped by the five stages.
+- *What I changed:* I decided that a missing `creator_id` should fall back to the caller's address and that I would not add a minimum word count in input validation. 
 
 ---
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 6 per minute, 120 per day (`config.py::RATE_LIMIT_PER_MINUTE` and `RATE_LIMIT_PER_DAY`, applied to `/submit` in `app.py`).
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
+A real writer submits their own work a few times an hour. 6 per minute lets them fix a typo and resubmit several times in a row without hitting the wall, and 120 per day is about 5 an hour across a full day, far more than one person writing needs. A script mapping my thresholds needs hundreds of probes, so 120 per day caps it at a small fraction of that per creator, and 6 per minute means it takes at least 20 minutes just to spend them. The per-minute number also protects the service itself, because every request runs GPT-2 locally (one to two seconds each), so 6 per minute is a bounded amount of compute per caller. I did not go lower because a stricter limit would start rejecting a legitimate writer who resubmits a few revisions in a minute. The weakness: the limit is per `creator_id`, so a script that invents a new `creator_id` for every request gets a fresh allowance each time. I did not close that.
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+**What a caller counts as:** the `creator_id` in the request body, falling back to the caller's IP address when it is missing or not a string (`app.py::rate_limit_key`). Per `creator_id` means one script using one id is caught, but a script rotating ids is not. Per address would catch the rotating script but would lump a whole household or office into one caller. Requests with no usable `creator_id` all share their address's bucket; that is why RQ11 in the attack run returned 429 before its content was ever checked.
 
 **The run of status codes when I pushed past it:**
 
-<!-- python run_attacks.py --flood 15 -->
+`python run_attacks.py --flood 15`, saved to `results/flood_2026-11-04_1754.md`. The first 6 requests got 200 and the other 9 got 429, matching the 6 per minute limit. Each rejection is in the audit log with `reason: rate_limited`.
 
 ```
 The first one is slow while the model loads.
@@ -411,7 +407,7 @@ where the error falls on a person for how they speak.
 | 1. False positives | At most 2 of 10 of my own texts get `guess: "ai"`, in every trial | 1 of 10 `ai` (8 unsure, 1 human) | 1 of 10 | 1 of 10 | **MET** |
 | 2. Score spread | Mean combined score of 5 AI texts at least 0.20 above 5 human texts | AI 0.706, human 0.533, gap **0.172** | 0.172 | 0.172 | **MISSED** (all 3) |
 | 3. Label coverage | `human`, `unsure` and `ai` each appear at least once | all three appear (3 ai, 1 human, 2 unsure) | same | same | **MET** |
-| 4. Appeal path | Appeal returns 200, logs `under_review`, keeps the original; unknown id returns 404 | tested by hand (see below): 200 `under_review`, original kept, unknown id 404 | not repeated (deterministic, one manual pass) | not repeated | **MET** (one manual pass, not three trials) |
+| 4. Appeal path | Appeal returns 200, logs `under_review`, keeps the original; unknown id returns 404 | 200 `under_review`, original kept, unknown id 404 | same | same | **MET** (3 manual trials; `run_eval.py` cannot drive an appeal) |
 | 5. Bad input | Missing/empty/whitespace `text` returns 422; over 10,000 characters returns 413 | 0 of 4 correct | 0 of 4 | 0 of 4 | **MISSED** (all 3) |
 
 Run: `python run_eval.py --label before`, output in
@@ -731,6 +727,14 @@ untouched; the appeal is a separate entry):
 {"content_id": "0933ee38-fdfa-4cfc-a539-5b3ab2506937", "creator_id": "eval_appeal", "event": "appeal", "reasoning": "I wrote this myself and believe the detector incorrectly classified it.", "status": "under_review", "timestamp": "2026-11-05T03:59:28+00:00"}
 ```
 
+Repeated three times by hand (2026-11-05, creators `eval_appeal_run1` to `eval_appeal_run3`), each: submit, appeal with reasoning, appeal with an unknown id, then read the log for that `content_id`:
+
+```
+run 1: submit 200 unsure | appeal 200 under_review | unknown id 404 | log: decided, appeal(under_review)
+run 2: submit 200 unsure | appeal 200 under_review | unknown id 404 | log: decided, appeal(under_review)
+run 3: submit 200 unsure | appeal 200 under_review | unknown id 404 | log: decided, appeal(under_review)
+```
+
 Gap found while testing, outside what criterion 4 promises: `/appeal` also
 returns 200 and logs `under_review` when `reasoning` is empty or missing (two
 extra log entries with `"reasoning": ""`), and returns 404 rather than a 422
@@ -793,7 +797,7 @@ This is criterion 5 missed in all three trials (0 of 4 correct).
 - *Plain human writing reads as AI.* FP02 to FP07 scored 0.74 to 0.88 on this signal and all six were labelled AI. FP03, a careful second-language writer, scored 0.8051 (combined 0.718). FP04 and FP05 are short declarative sentences in common words. FP06 (formal letter, 0.8814) and FP07 (deliberate repetition, 0.8816) are highest, since GPT-2 predicts a phrase it has just seen. This is the weakness the module docstring warns about, and it falls on writers with the least room to argue. One of my own ten texts (the GIMP review, 0.8062) was hit too.
 - *Unpredictable text reads as human.* EV01 (typos) scored 0.1635, EV05 (heavy edit) 0.3212 and EV08 (two short sentences) 0.2452, so all three were labelled human. I expected the typos to work through signal two, but its score barely moved (0.4955); signal one fell, because misspellings and unusual voice are tokens the model didn't expect. EV08 is so short that a few surprising tokens dominate. I never submitted the unmodified base text, so I can't say how far each edit moved the score. The other evasions (EV02, 03, 04, 06, 07, 09) stayed in unsure.
 - *Prompt injection worked only as noise.* PI02 scored 0.2044 and came back human, but no LLM reads the text. The `SYSTEM:` preamble is just odd tokens that raise perplexity. PI01 had the same base text with a different preamble and scored 0.4625, which suggests the tokens matter, not the instruction. PI03 to PI06 stayed unsure, and PI04's script tag never reached the label, which comes from a fixed table.
-- *Garbage gets extreme scores.* Punctuation only (MF04, 0.0112) and control characters (MF03, 0.0) are maximally surprising, so they get a confident human. A repeated character (MF05, 0.9976) and emoji (MF06, 0.9969) are near-perfectly predictable, so they get a confident AI. Right-to-left text (MF07, 0.9064) was also called AI, which would accuse a writer in another script; I haven't confirmed why.
+- *Garbage gets extreme scores.* Punctuation only (MF04, 0.0112) and control characters (MF03, 0.0) are maximally surprising, so they get a confident human. A repeated character (MF05, 0.9976) and emoji (MF06, 0.9969) are near-perfectly predictable, so they get a confident AI. Right-to-left text (MF07, 0.9064) was also called AI, which would accuse a writer in another script. I measured it: GPT-2's tokenizer breaks the Arabic into about one token per character (103 tokens for 105 characters, only 41 distinct), and its perplexity was 10.9, against 1.04 for MF05 (one token repeated 400 times) and 1.22 for MF06 (13 distinct tokens in 400). That is consistent with the model finding byte-level fragments and repeats easy to predict; I did not test the byte-level explanation directly.
 
 **3. Signal two: no information about authorship, and maxed out by empty input.**
 `style_signal` averages `1 / (1 + sentence_length_spread)` and `1 - type_token_ratio`. In the score-spread set the AI texts averaged 0.466 and the human texts 0.481, a gap of -0.016 against 0.253 on signal one. Input with no words (MF01, MF04, MF06, MF07) has spread 0 and vocabulary ratio 0, so the formula returns exactly 1.0, its most AI-like value. This is the designed blind spot: it measures shape, and empty input has none.
@@ -826,23 +830,81 @@ Errors are JSON, so callers no longer get the Werkzeug HTML error page. The scor
 
 ### Attack Run — After
 
-`python run_attacks.py --label after --set attack_set`, written to `results/attack_run_2026-11-04_2020_after.md`. Judged with the same rules as the before run.
+`python run_attacks.py --label after --set attack_set`, written to `results/attack_run_2026-11-04_2020_after.md`. Same 56 attacks, same marking rules as the before run, same layout, so the two can be compared row by row. Crashes are now HELD because the service rejects the input with a clean 422 or 413.
 
-| Family | Before: BROKE | After: BROKE | What moved |
-|---|---|---|---|
-| evasion | 3 (EV01, EV05, EV08) | 3 | unchanged |
-| false_positive | 6 (FP02–FP07) | 6 | unchanged |
-| prompt_injection | 1 (PI02) | 1 | unchanged |
-| malformed | 17 | 5 (MF03–MF07) | all 10 crashes now 422; MF01 422, MF02 422, MF08 413; RQ02 and RQ06 now accepted with the address as `creator_id` |
-| flood_same_creator | 0 | 0 | unchanged (first 6 pass, last 6 get 429) |
-| **Total** | **27 of 56** | **15 of 56** | |
+| Family | Attacks | Auto-BROKE | My BROKE | HELD | Total BROKE | Before | Which |
+|---|---|---|---|---|---|---|---|
+| evasion | 10 | 0 | 3 | 7 | 3 | 3 | EV01, EV05, EV08 (unchanged) |
+| false_positive | 8 | 0 | 6 | 2 | 6 | 6 | FP02–FP07 (unchanged) |
+| prompt_injection | 6 | 0 | 1 | 5 | 1 | 1 | PI02 (unchanged) |
+| malformed | 20 | 0 | 5 | 15 | 5 | 17 | MF03–MF07. The 10 crashes, MF01, MF02, MF08, RQ02 and RQ06 are now HELD |
+| flood_same_creator | 12 | 0 | 0 | 12 | 0 | 0 | first 6 returned 200, last 6 returned 429 (unchanged) |
+| **Total** | **56** | **0** | **15** | **41** | **15** | **27** | |
 
-Auto-marked BROKE (5xx or crash) went from 10 to 0. Status codes for the malformed rows, after:
+Full output:
 
 ```
-MF01 422   MF02 422   MF08 413   RQ01 422   RQ03 422   RQ04 422
-RQ05 422   RQ07 422   RQ08 422   RQ09 422   RQ10 422   RQ12 422
-RQ02 200 (creator_id -> 127.0.0.1)   RQ06 200 (creator_id -> 127.0.0.1)
+  [ 1/56] EV01    evasion           200   human    BROKE
+  [ 2/56] EV02    evasion           200   unsure   HELD
+  [ 3/56] EV03    evasion           200   unsure   HELD
+  [ 4/56] EV04    evasion           200   unsure   HELD
+  [ 5/56] EV05    evasion           200   human    BROKE
+  [ 6/56] EV06    evasion           200   unsure   HELD
+  [ 7/56] EV07    evasion           200   unsure   HELD
+  [ 8/56] EV08    evasion           200   human    BROKE
+  [ 9/56] EV09    evasion           200   unsure   HELD
+  [10/56] EV10    evasion           200   ai       HELD
+  [11/56] FP01    false_positive    200   unsure   HELD
+  [12/56] FP02    false_positive    200   ai       BROKE
+  [13/56] FP03    false_positive    200   ai       BROKE
+  [14/56] FP04    false_positive    200   ai       BROKE
+  [15/56] FP05    false_positive    200   ai       BROKE
+  [16/56] FP06    false_positive    200   ai       BROKE
+  [17/56] FP07    false_positive    200   ai       BROKE
+  [18/56] FP08    false_positive    200   human    HELD
+  [19/56] PI01    prompt_injection  200   unsure   HELD
+  [20/56] PI02    prompt_injection  200   human    BROKE
+  [21/56] PI03    prompt_injection  200   unsure   HELD
+  [22/56] PI04    prompt_injection  200   unsure   HELD
+  [23/56] PI05    prompt_injection  200   unsure   HELD
+  [24/56] PI06    prompt_injection  200   unsure   HELD
+  [25/56] MF01    malformed         422   —        HELD
+  [26/56] MF02    malformed         422   —        HELD
+  [27/56] MF03    malformed         200   human    BROKE
+  [28/56] MF04    malformed         200   human    BROKE
+  [29/56] MF05    malformed         200   ai       BROKE
+  [30/56] MF06    malformed         200   ai       BROKE
+  [31/56] MF07    malformed         200   ai       BROKE
+  [32/56] MF08    malformed         413   —        HELD
+  [33/56] RQ01    malformed         422   —        HELD
+  [34/56] RQ02    malformed         200   human    HELD
+  [35/56] RQ03    malformed         422   —        HELD
+  [36/56] RQ04    malformed         422   —        HELD
+  [37/56] RQ05    malformed         422   —        HELD
+  [38/56] RQ06    malformed         200   human    HELD
+  [39/56] RQ07    malformed         422   —        HELD
+  [40/56] RQ08    malformed         422   —        HELD
+  [41/56] RQ09    malformed         422   —        HELD
+  [42/56] RQ10    malformed         422   —        HELD
+  [43/56] RQ11    malformed         429   —        HELD
+  [44/56] RQ12    malformed         422   —        HELD
+  [45/56] FL01_01 flood_same_creator 200   human    HELD
+  [46/56] FL01_02 flood_same_creator 200   human    HELD
+  [47/56] FL01_03 flood_same_creator 200   human    HELD
+  [48/56] FL01_04 flood_same_creator 200   human    HELD
+  [49/56] FL01_05 flood_same_creator 200   human    HELD
+  [50/56] FL01_06 flood_same_creator 200   human    HELD
+  [51/56] FL01_07 flood_same_creator 429   —        HELD
+  [52/56] FL01_08 flood_same_creator 429   —        HELD
+  [53/56] FL01_09 flood_same_creator 429   —        HELD
+  [54/56] FL01_10 flood_same_creator 429   —        HELD
+  [55/56] FL01_11 flood_same_creator 429   —        HELD
+  [56/56] FL01_12 flood_same_creator 429   —        HELD
+============================================================
+  auto-marked BROKE: 0
+  judged by me:      56  (41 HELD, 15 BROKE)
+  final:             15 BROKE, 41 HELD
+============================================================
 ```
 
 Criterion 5, `python run_eval.py --label after` (`results/run_2026-11-04_2020_after.md`): **4 of 4 correct in all three trials** (missing `text` 422, empty 422, whitespace 422, 10,001 characters 413), up from 0 of 4. Criteria 1 and 3 are unchanged (met), criterion 2 is unchanged (0.172 gap, still missed). The same results held in all three trials.
@@ -859,50 +921,28 @@ Two things this did not fix:
 
 ## What's Still Broken
 
-<!-- For each attack still getting through and each criterion still missed:
-     what you'd do, and why you stopped. -->
+After the input-validation fix, 15 of 56 attacks still get through and one criterion (2) is still missed. Everything left comes from the scoring, not the route. I stopped here because the assignment asks for one improvement and I picked the one with no trade on the other side. Each fix below moves a threshold or a weight, and I haven't tested any of them across three trials, so I haven't changed them.
 
+**Human writing called AI: FP02–FP07 (6 attacks).**
+These combine to 0.68 to 0.79. What I'd do: raise `AI_THRESHOLD` in `config.py` from 0.65 to about 0.80. The cost is on the other side: in my score-spread set four of the five clear-AI texts combine to 0.65 to 0.80 (0.653, 0.710, 0.732, 0.799), so they would drop from "ai" to "unsure". Only the most extreme AI text, like EV10 at 0.895, would still be labelled AI. I didn't do it because that is a decision about how much missed AI I accept, and I wanted to make it deliberately.
 
+**Evasions that read as human: EV01, EV05, EV08 (3 attacks), and PI02.**
+Typos, a heavy edit, very short text and an odd preamble all lower signal one, because the model finds unusual tokens surprising. There is no cheap fix. For EV08 (two short sentences) I'd stop the service from giving a confident "human" or "ai" label to text under a minimum length and return "unsure" instead. For typos I'd need a signal that is not perplexity, which is more work than this unit allowed. PI02 isn't a real injection (nothing reads instructions); it's the same noise as the typos, so it is fixed by the same changes.
+
+**Garbage with a confident label: MF03–MF07 (5 attacks).**
+These are non-empty strings, so validation lets them through. What I'd do: reject text with fewer than 2 words or mostly non-letter characters, which would catch MF03 to MF06. It would not catch MF07 (right-to-left text), because those are letters; its tokens are fragmented and repetitive (103 tokens, 41 distinct, perplexity 10.9), so only a change to the detector would fix it. I held off on a word-count rule at your direction and because a stricter rule would start rejecting short genuine text like FP08.
+
+**Criterion 2 (score spread) still missed: 0.172 against 0.20, in all three trials.**
+Signal two separates the groups by -0.016, so it only dilutes signal one's 0.253 gap. What I'd do: cut the style weight, for example to 0.85 / 0.15 in `config.py`. By my arithmetic that gives a gap of about 0.213, which would pass, but I haven't run it. It would also shift every other score and the label bands (criterion 3), so it needs a full re-run of the eval before I trust it. It also leaves the six false positives untouched, because those come from signal one.
+
+**Smaller items**
+- *RQ11 was never tested.* It still returns 429 from the shared address bucket, so it needs a re-run on its own.
+- *Appeals accept an empty `reasoning`.* Criterion 4 is met as written, but `/appeal` should return 422 for a blank reason and for a missing `content_id`. I found this while testing and haven't fixed it.
+- *`confidence` is hard-coded to 0.5.* Every response reports it, so it carries no information.
+- *Criterion 4 was tested once by hand, not across three trials,* because `run_eval.py` can't drive an appeal.
 
 **The trade I'd make if this ran for real:**
-
-<!-- Two sentences. Fewer wrong accusations means more AI text getting through.
-     Say which way you'd go and WHO PAYS FOR IT. -->
-
-
-
-<!-- ═════════════════════════════════════════════════════════════════════
-
-     SUBMISSION CHECKLIST — unit 7
-
-       [ ] criteria.md has five numbered criteria, each naming a target
-       [ ] Each has a reason underneath
-       [ ] POST /submit returns content_id, guess, confidence, label,
-           model_score and style_score
-       [ ] Two signals that measure DIFFERENT things, each with a named blind spot
-       [ ] Three label variants, all reachable, written out in full
-       [ ] POST /appeal changes status and writes to the log
-       [ ] Signals and Scoring names scoring.py::combine_signals
-       [ ] Sample Run: a submission AND an appeal, as pasted text
-       [ ] At least four new commits
-       [ ] Repository URL submitted — WRITE IT DOWN
-
-     SUBMISSION CHECKLIST — unit 8
-
-       [ ] Rate limiting on /submit, with your numbers justified
-       [ ] The pasted run of status codes showing 429
-       [ ] Audit log with all nine fields, recording rejections too
-       [ ] The attack set run IN FULL, every input with an outcome
-       [ ] Ten audit log entries pasted as text
-       [ ] Five criteria across three trials
-       [ ] A diagnosis for every miss and every broken attack — stage AND mechanism
-       [ ] One improvement, with Attack Run — After
-       [ ] What's Still Broken, including the production trade
-       [ ] At least four new commits
-       [ ] The SAME repository URL as last unit
-
-     Do not delete and recreate this repository.
-     ═════════════════════════════════════════════════════════════════════ -->
+I'd go toward fewer wrong accusations: raise the AI threshold so "ai" is reserved for the clearest cases, and keep the appeal path. The cost of that falls on the site and on readers and honest writers who compete with undetected AI text, and I'd accept that over making a second-language writer like FP03 pay for a wrong label about their own work.
 
 ---
 

@@ -248,7 +248,30 @@ can look like one. -->
 <!-- python run_attacks.py --flood 15 -->
 
 ```
+The first one is slow while the model loads.
 
+  [ 1/15] 200
+  [ 2/15] 200
+  [ 3/15] 200
+  [ 4/15] 200
+  [ 5/15] 200
+  [ 6/15] 200
+  [ 7/15] 429
+  [ 8/15] 429
+  [ 9/15] 429
+  [10/15] 429
+  [11/15] 429
+  [12/15] 429
+  [13/15] 429
+  [14/15] 429
+  [15/15] 429
+
+============================================================
+200 200 200 200 200 200 429 429 429 429 429 429 429 429 429
+============================================================
+
+9 of 15 were rate limited. Paste the run above into your README
+under **Rate Limiting**, and check GET /log recorded the rejections.
 ```
 
 ---
@@ -258,6 +281,70 @@ can look like one. -->
 <!-- Every attack with its outcome and a held-or-broke mark.
      `run_attacks.py --label before` produces the table. -->
 
+```
+ [ 1/56] EV01   evasion           200   human    ?
+  [ 2/56] EV02   evasion           200   unsure   ?
+  [ 3/56] EV03   evasion           200   unsure   ?
+  [ 4/56] EV04   evasion           200   unsure   ?
+  [ 5/56] EV05   evasion           200   human    ?
+  [ 6/56] EV06   evasion           200   unsure   ?
+  [ 7/56] EV07   evasion           200   unsure   ?
+  [ 8/56] EV08   evasion           200   human    ?
+  [ 9/56] EV09   evasion           200   unsure   ?
+  [10/56] EV10   evasion           200   ai       ?
+  [11/56] FP01   false_positive    200   unsure   ?
+  [12/56] FP02   false_positive    200   ai       ?
+  [13/56] FP03   false_positive    200   ai       ?
+  [14/56] FP04   false_positive    200   ai       ?
+  [15/56] FP05   false_positive    200   ai       ?
+  [16/56] FP06   false_positive    200   ai       ?
+  [17/56] FP07   false_positive    200   ai       ?
+  [18/56] FP08   false_positive    200   human    ?
+  [19/56] PI01   prompt_injection  200   unsure   ?
+  [20/56] PI02   prompt_injection  200   human    ?
+  [21/56] PI03   prompt_injection  200   unsure   ?
+  [22/56] PI04   prompt_injection  200   unsure   ?
+  [23/56] PI05   prompt_injection  200   unsure   ?
+  [24/56] PI06   prompt_injection  200   unsure   ?
+  [25/56] MF01   malformed         200   unsure   ?
+  [26/56] MF02   malformed         500   —        BROKE
+  [27/56] MF03   malformed         200   human    ?
+  [28/56] MF04   malformed         200   human    ?
+  [29/56] MF05   malformed         200   ai       ?
+  [30/56] MF06   malformed         200   ai       ?
+  [31/56] MF07   malformed         200   ai       ?
+  [32/56] MF08   malformed         200   ai       ?
+  [33/56] RQ01   malformed         500   —        BROKE
+  [34/56] RQ02   malformed         200   human    ?
+  [35/56] RQ03   malformed         500   —        BROKE
+  [36/56] RQ04   malformed         500   —        BROKE
+  [37/56] RQ05   malformed         500   —        BROKE
+  [38/56] RQ06   malformed         200   human    ?
+  [39/56] RQ07   malformed         500   —        BROKE
+  [40/56] RQ08   malformed         500   —        BROKE
+  [41/56] RQ09   malformed         500   —        BROKE
+  [42/56] RQ10   malformed         500   —        BROKE
+  [43/56] RQ11   malformed         429   —        ?
+  [44/56] RQ12   malformed         500   —        BROKE
+  [45/56] FL01_01 flood_same_creator 200   human    ?
+  [46/56] FL01_02 flood_same_creator 200   human    ?
+  [47/56] FL01_03 flood_same_creator 200   human    ?
+  [48/56] FL01_04 flood_same_creator 200   human    ?
+  [49/56] FL01_05 flood_same_creator 200   human    ?
+  [50/56] FL01_06 flood_same_creator 200   human    ?
+  [51/56] FL01_07 flood_same_creator 429   —        ?
+  [52/56] FL01_08 flood_same_creator 429   —        ?
+  [53/56] FL01_09 flood_same_creator 429   —        ?
+  [54/56] FL01_10 flood_same_creator 429   —        ?
+  [55/56] FL01_11 flood_same_creator 429   —        ?
+  [56/56] FL01_12 flood_same_creator 429   —        ?
+
+============================================================
+Wrote results\attack_run_2026-11-04_1753_before.md
+  auto-marked BROKE: 10
+  left for you:      46
+============================================================
+```
 
 
 **Twelve audit log entries from the run**
@@ -309,18 +396,335 @@ where the error falls on a person for how they speak.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. False positives | At most 2 of 10 of my own texts get `guess: "ai"`, in every trial | 1 of 10 `ai` (8 unsure, 1 human) | 1 of 10 | 1 of 10 | **MET** |
+| 2. Score spread | Mean combined score of 5 AI texts at least 0.20 above 5 human texts | AI 0.706, human 0.533, gap **0.172** | 0.172 | 0.172 | **MISSED** (all 3) |
+| 3. Label coverage | `human`, `unsure` and `ai` each appear at least once | all three appear (3 ai, 1 human, 2 unsure) | same | same | **MET** |
+| 4. Appeal path | Appeal returns 200, logs `under_review`, keeps the original; unknown id returns 404 | not run by `run_eval.py` (it only posts to `/submit`; the submit returned 200, unsure) | same | same | **NOT TESTED by this run** (needs a manual submit then appeal) |
+| 5. Bad input | Missing/empty/whitespace `text` returns 422; over 10,000 characters returns 413 | 0 of 4 correct | 0 of 4 | 0 of 4 | **MISSED** (all 3) |
 
-**Real output from one trial**, pasted as text, naming the file and function
-that produced it:
+Run: `python run_eval.py --label before`, output in
+`results/run_2026-11-04_1756_before.md`. All three trials returned identical
+scores for every input, so they confirmed stability but added no new
+information: the model signal is deterministic here, and a 0.172 gap is the
+same 0.172 each time. Criterion 2 is computed from the logged scores as
+`0.7 * model_score + 0.3 * style_score`, since the eval report does not
+include `combined_score`. For criterion 5 the first two bodies (no `text`,
+empty `text`) show status `null` because the service answered with a non-JSON
+error page and `run_eval.py` fails on `response.json()` before it records the
+status code; the whitespace body got 200 and the 10,001-character body got 200.
+
+**Real output for each criterion, trial 1 of `python run_eval.py --label before`.**
+Produced by `run_eval.py::main` (the `results.append(...)` loop that posts each
+body to `/submit`), written by `run_eval.py::write_report` to
+`results/run_2026-11-04_1756_before.md`. Pasted unedited; trials 2 and 3 in that
+file are identical. The `sent` field is truncated by `run_eval.py::describe`.
+
+*Criterion 1. False positives* (scenario `my own writing`)
 
 ```json
-
+[
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.8062,
+    "style_score": 0.5608874019170043,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "The tutorial is about GIMP which is an image editing application. It t"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.4635,
+    "style_score": 0.4397760702021965,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The formatting and design is great. I didn\u2019t see anything confusing. I"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5751,
+    "style_score": 0.45761994855822524,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The author explains on the first page what GIMP tutorial is about. It "
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.5,
+    "model_score": 0.221,
+    "style_score": 0.4527990387582848,
+    "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
+    "sent": "Adding an image for the windows enable/disable settings would make it "
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5445,
+    "style_score": 0.5503902496747589,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The tutorial is about how a user can use Gmail and its email sorting f"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.456,
+    "style_score": 0.5520677419595373,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The author probably assumed that the readers need to know every bit of"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.3446,
+    "style_score": 0.47024747632741204,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "Using high resolution images so the texts are more visible. Rephrasing"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5824,
+    "style_score": 0.523294654018869,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The tutorial is about using youTube. The author explains how a user ca"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.4018,
+    "style_score": 0.5335729453668189,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The author does a good job on explaining each feature the app has. The"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.3353,
+    "style_score": 0.4807926013898646,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "I didn\u2019t notice any redundancies. The intro does not mention anything "
+  }
+]
 ```
+
+*Criterion 2. Score spread* (scenario `score spread`)
+
+```json
+[
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.7191,
+    "style_score": 0.4975991026808101,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Artificial intelligence is transforming modern industries by improving"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.9315,
+    "style_score": 0.4887578749998101,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Climate change is one of the most significant challenges facing the wo"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.8354,
+    "style_score": 0.415785855065232,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Technology plays an important role in modern education. Online learnin"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.8571,
+    "style_score": 0.441374509052427,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Maintaining a healthy lifestyle requires a combination of regular phys"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.7009,
+    "style_score": 0.4846153846153846,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "Cybersecurity has become increasingly important as organizations store"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.8054,
+    "style_score": 0.5275820271799756,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "The tutorial is about GIMP which is an image editing application. It t"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.3686,
+    "style_score": 0.3457109452053455,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The formatting and design is great. I didn\u2019t see anything confusing. I"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5311,
+    "style_score": 0.5015531779209179,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The tutorial is about how a user can use Gmail and its email sorting f"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5741,
+    "style_score": 0.47338000286720444,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The tutorial is about using youTube. The author explains how a user ca"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.4999,
+    "style_score": 0.558661052885839,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "I think the author assumed the users are beginner because the tutorial"
+  }
+]
+```
+
+*Criterion 3. Label coverage* (scenario `label coverage`)
+
+```json
+[
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.7374,
+    "style_score": 0.4735877351967195,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Artificial intelligence is transforming modern industries by improving"
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.5,
+    "model_score": 0.2877,
+    "style_score": 0.47117698959976834,
+    "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
+    "sent": "The author does well job on explaining the windows Modes. It would hav"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.7485,
+    "style_score": 0.4947435712431848,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "I think the tutorial is good overall. Some parts are easy to understan"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.637,
+    "style_score": 0.4468626430767404,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The tutorial explains how people can use the application. I liked some"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.8528,
+    "style_score": 0.4223525045507832,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "Technology has changed how people communicate with each other. Many pe"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.5122,
+    "style_score": 0.4683027421096951,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "The author explains the topic clearly in most sections. However, I not"
+  }
+]
+```
+
+*Criterion 4. Appeal path* (scenario `appeal path`)
+
+```json
+[
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5,
+    "model_score": 0.6227,
+    "style_score": 0.34980844735229033,
+    "label": "We cannot confidently determine whether this text was written by a person or AI.",
+    "sent": "Technology allows people to communicate and share information quickly."
+  }
+]
+```
+
+*Criterion 5. Bad input* (scenario `bad input`)
+
+```json
+[
+  {
+    "status": null,
+    "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "sent": "{\"creator_id\": \"eval_missing_text\"}"
+  },
+  {
+    "status": null,
+    "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "sent": "(empty text)"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.7997,
+    "style_score": 1.0,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "   "
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.5,
+    "model_score": 0.9976,
+    "style_score": 0.5,
+    "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
+    "sent": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+]
+```
+
 
 **Diagnoses**
 

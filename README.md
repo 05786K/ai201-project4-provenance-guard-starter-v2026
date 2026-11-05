@@ -260,17 +260,45 @@ can look like one. -->
 
 
 
-**Ten audit log entries from the run**
+**Twelve audit log entries from the run**
 
-<!-- Choose entries that show the interesting failures, not the ten easiest. -->
+Taken from `logs/audit.jsonl` (the 16:13 run, 00:13 UTC). In order: three evasions
+read as human (EV01, EV05, EV08), three false positives (FP03, FP06, FP07), the
+injection that came back human (PI02), garbage scored confidently (MF04 punctuation,
+MF06 emoji), two malformed requests logged as if valid (RQ02 empty `creator_id`,
+RQ06 object `creator_id`), and one rate-limit rejection, which carries no
+`content_id` or scores.
 
 ```json
-
+{"timestamp": "2026-11-05T00:13:47+00:00", "content_id": "242a5bf5-4500-46aa-92f6-12e7754fcf49", "creator_id": "attacker_EV01", "guess": "human", "model_score": 0.1635, "style_score": 0.4954668754756913, "combined_score": 0.2630900626427074, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:47+00:00", "content_id": "31f6bdb8-c541-457e-9e56-c0f0510ee34c", "creator_id": "attacker_EV05", "guess": "human", "model_score": 0.3212, "style_score": 0.4143144609464353, "combined_score": 0.3491343382839306, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:48+00:00", "content_id": "aa8c2ffd-52ac-49b4-86e2-899aee99dc89", "creator_id": "attacker_EV08", "guess": "human", "model_score": 0.2452, "style_score": 0.3897593953942288, "combined_score": 0.28856781861826863, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:49+00:00", "content_id": "cbdabe0c-9448-48a7-bfce-cf37443793e1", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.5150066988642605, "combined_score": 0.7180720096592782, "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:49+00:00", "content_id": "dc996818-feb4-472d-950d-6a7b9e6d2acc", "creator_id": "attacker_FP06", "guess": "ai", "model_score": 0.8814, "style_score": 0.4619408908912053, "combined_score": 0.7555622672673615, "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:49+00:00", "content_id": "521194a3-ba5d-4f44-b922-3aa0f2374234", "creator_id": "attacker_FP07", "guess": "ai", "model_score": 0.8816, "style_score": 0.5600513751364047, "combined_score": 0.7851354125409213, "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:50+00:00", "content_id": "84bd0d2e-3f69-4f5a-b6e3-712f400b32f6", "creator_id": "attacker_PI02", "guess": "human", "model_score": 0.2044, "style_score": 0.32491589015512873, "combined_score": 0.2405547670465386, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:51+00:00", "content_id": "89a82660-5b80-4646-b677-9b9a42cdc18d", "creator_id": "attacker_MF04", "guess": "human", "model_score": 0.0112, "style_score": 1.0, "combined_score": 0.30784, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:52+00:00", "content_id": "7e66f1e2-7ce7-48d1-aac2-bff28ca12384", "creator_id": "attacker_MF06", "guess": "ai", "model_score": 0.9969, "style_score": 1.0, "combined_score": 0.99783, "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:52+00:00", "content_id": "7e02b8e0-9548-492e-9e42-8d5d6457d0b1", "creator_id": "", "guess": "human", "model_score": 0.2395, "style_score": 0.5, "combined_score": 0.31765, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:53+00:00", "content_id": "108b4001-4118-407a-bc16-7feeeea3e034", "creator_id": {"id": "x"}, "guess": "human", "model_score": 0.0492, "style_score": 0.5, "combined_score": 0.18444, "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.", "status": "decided"}
+{"timestamp": "2026-11-05T00:13:54+00:00", "creator_id": "attacker_flood", "event": "rejected", "status": "rejected", "reason": "rate_limited", "limit": "6 per 1 minute"}
 ```
 
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
 
+**FP03, content_id `cbdabe0c-9448-48a7-bfce-cf37443793e1`.** A non-native English
+speaker wrote a plain, careful paragraph about their first month in a new
+country. The service scored it 0.805 on signal one and 0.515 on signal two
+(combined 0.718) and told them it "shows patterns commonly associated with
+AI-generated writing." Short, simple sentences and common vocabulary are
+exactly what a careful second-language writer produces, and also what the
+model signal reads as low-perplexity, machine-like text. The label's hedge
+("does not prove that AI was used") doesn't help much: the writer is still
+being told, about a deeply personal account, that it looks machine-made, and
+the cause is who they are rather than anything they did. Five other human
+texts (FP02, FP04, FP05, FP06, FP07) got the same label, but this is the one
+where the error falls on a person for how they speak.
 
 
 ---

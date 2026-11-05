@@ -399,7 +399,7 @@ where the error falls on a person for how they speak.
 | 1. False positives | At most 2 of 10 of my own texts get `guess: "ai"`, in every trial | 1 of 10 `ai` (8 unsure, 1 human) | 1 of 10 | 1 of 10 | **MET** |
 | 2. Score spread | Mean combined score of 5 AI texts at least 0.20 above 5 human texts | AI 0.706, human 0.533, gap **0.172** | 0.172 | 0.172 | **MISSED** (all 3) |
 | 3. Label coverage | `human`, `unsure` and `ai` each appear at least once | all three appear (3 ai, 1 human, 2 unsure) | same | same | **MET** |
-| 4. Appeal path | Appeal returns 200, logs `under_review`, keeps the original; unknown id returns 404 | not run by `run_eval.py` (it only posts to `/submit`; the submit returned 200, unsure) | same | same | **NOT TESTED by this run** (needs a manual submit then appeal) |
+| 4. Appeal path | Appeal returns 200, logs `under_review`, keeps the original; unknown id returns 404 | tested by hand (see below): 200 `under_review`, original kept, unknown id 404 | not repeated (deterministic, one manual pass) | not repeated | **MET** (one manual pass, not three trials) |
 | 5. Bad input | Missing/empty/whitespace `text` returns 422; over 10,000 characters returns 413 | 0 of 4 correct | 0 of 4 | 0 of 4 | **MISSED** (all 3) |
 
 Run: `python run_eval.py --label before`, output in
@@ -690,6 +690,41 @@ file are identical. The `sent` field is truncated by `run_eval.py::describe`.
 ]
 ```
 
+*Criterion 4, manual test* (not produced by `run_eval.py`, which only posts to
+`/submit`). I ran this by hand against the live service with a short Python
+script using `urllib` to `POST /submit`, then `POST /appeal`, then `GET /log`.
+Real responses, 2026-11-05 03:59 UTC:
+
+```
+SUBMIT 200
+{"combined_score": 0.5408325342056871, "confidence": 0.5,
+ "content_id": "0933ee38-fdfa-4cfc-a539-5b3ab2506937", "guess": "unsure",
+ "label": "We cannot confidently determine whether this text was written by a person or AI.",
+ "model_score": 0.6227, "style_score": 0.34980844735229033}
+
+APPEAL (real content_id, reasoning given) 200
+{"content_id": "0933ee38-fdfa-4cfc-a539-5b3ab2506937",
+ "message": "Your appeal has been submitted and is under review.",
+ "status": "under_review"}
+
+APPEAL (content_id "does-not-exist") 404
+{"error": "not_found", "message": "No submission found with that content_id."}
+```
+
+Audit log entries for that `content_id` afterwards (the original decision is
+untouched; the appeal is a separate entry):
+
+```json
+{"combined_score": 0.5408325342056871, "content_id": "0933ee38-fdfa-4cfc-a539-5b3ab2506937", "creator_id": "eval_appeal", "guess": "unsure", "label": "We cannot confidently determine whether this text was written by a person or AI.", "model_score": 0.6227, "status": "decided", "style_score": 0.34980844735229033, "timestamp": "2026-11-05T03:59:28+00:00"}
+{"content_id": "0933ee38-fdfa-4cfc-a539-5b3ab2506937", "creator_id": "eval_appeal", "event": "appeal", "reasoning": "I wrote this myself and believe the detector incorrectly classified it.", "status": "under_review", "timestamp": "2026-11-05T03:59:28+00:00"}
+```
+
+Gap found while testing, outside what criterion 4 promises: `/appeal` also
+returns 200 and logs `under_review` when `reasoning` is empty or missing (two
+extra log entries with `"reasoning": ""`), and returns 404 rather than a 422
+when `content_id` is missing. The criterion only requires 200 for a non-empty
+reasoning, so it is met, but a blank appeal should be rejected.
+
 *Criterion 5. Bad input* (scenario `bad input`)
 
 ```json
@@ -728,21 +763,38 @@ file are identical. The `sent` field is truncated by `run_eval.py::describe`.
 
 **Diagnoses**
 
-<!-- For each miss AND each broken attack: the stage and the mechanism.
+Grouped by the stage that caused each failure: the route (`app.py::submit`), signal one (`detector.py::model_signal`), signal two (`stylometry.py::style_signal`), the combining rule (`scoring.py::combine_signals`, `0.70 * model + 0.30 * style`) and the label mapping (`scoring.py::score_to_label`, thresholds 0.35 and 0.65). Scores come from `results/attack_run_2026-11-04_1613.md` and `results/run_2026-11-04_1756_before.md`.
 
-     Your service has five stages: the route, signal one, signal two, the
-     combining rule, and the label mapping.
+**1. The route: ten crashes and four accepted bad inputs (one problem).**
+`app.py::submit` still has the starter body. It takes `payload.get("text", "")` and passes it straight to the detector without checking its type or length.
 
-     Not a diagnosis:  "The evasion attacks got through."
-     A diagnosis:      "Four evasion inputs got through. All four had typos
-                        added to AI-generated text. My second signal measures
-                        word variety, and typos raise word variety — so it read
-                        them as more human. My combining rule weights that
-                        signal at 0.6, so it dragged the whole score down."
+- *Ten attacks returned 500.* MF02, RQ01, RQ04, RQ08, RQ09 and RQ10 reach `detector.perplexity` with empty or tiny text, which raises `ValueError: Text is too short to score`. RQ03 (number), RQ05 (null) and RQ12 (nested object) pass a non-string to the tokenizer, which raises its own `ValueError`. RQ07 (JSON array) is truthy, so `or {}` doesn't replace it and `payload.get` raises `AttributeError`. The rate limiter's key function guards against this with `isinstance(payload, dict)`, but the route doesn't.
+- *Accepted but should be rejected.* Whitespace-only text (MF01, and the eval's `"   "`) is scored and logged. The 10,001-character eval body and MF08 (60,000 characters) both got 200, because there is no length cap; the detector silently truncates at 400 tokens. RQ02 (no `creator_id`) and RQ06 (object `creator_id`) are logged as decisions, and RQ06 writes `{"id": "x"}` into `logs/audit.jsonl`.
+- `confidence = 0.5` is hard-coded, so every response reports 0.5.
+- *RQ11 is untested, not held.* Its 429 most likely came from the shared per-address bucket that RQ02 and RQ06 to RQ10 (no usable `creator_id`) had already filled, not from content-type handling.
 
-     Look for a pattern. Five failures on one signal is one problem, not five. -->
+This is criterion 5 missed in all three trials (0 of 4 correct).
 
+**2. Signal one: false accusations, evasions and garbage scores (the largest problem).**
+`model_signal` measures predictability, not authorship.
 
+- *Plain human writing reads as AI.* FP02 to FP07 scored 0.74 to 0.88 on this signal and all six were labelled AI. FP03, a careful second-language writer, scored 0.8051 (combined 0.718). FP04 and FP05 are short declarative sentences in common words. FP06 (formal letter, 0.8814) and FP07 (deliberate repetition, 0.8816) are highest, since GPT-2 predicts a phrase it has just seen. This is the weakness the module docstring warns about, and it falls on writers with the least room to argue. One of my own ten texts (the GIMP review, 0.8062) was hit too.
+- *Unpredictable text reads as human.* EV01 (typos) scored 0.1635, EV05 (heavy edit) 0.3212 and EV08 (two short sentences) 0.2452, so all three were labelled human. I expected the typos to work through signal two, but its score barely moved (0.4955); signal one fell, because misspellings and unusual voice are tokens the model didn't expect. EV08 is so short that a few surprising tokens dominate. I never submitted the unmodified base text, so I can't say how far each edit moved the score. The other evasions (EV02, 03, 04, 06, 07, 09) stayed in unsure.
+- *Prompt injection worked only as noise.* PI02 scored 0.2044 and came back human, but no LLM reads the text. The `SYSTEM:` preamble is just odd tokens that raise perplexity. PI01 had the same base text with a different preamble and scored 0.4625, which suggests the tokens matter, not the instruction. PI03 to PI06 stayed unsure, and PI04's script tag never reached the label, which comes from a fixed table.
+- *Garbage gets extreme scores.* Punctuation only (MF04, 0.0112) and control characters (MF03, 0.0) are maximally surprising, so they get a confident human. A repeated character (MF05, 0.9976) and emoji (MF06, 0.9969) are near-perfectly predictable, so they get a confident AI. Right-to-left text (MF07, 0.9064) was also called AI, which would accuse a writer in another script; I haven't confirmed why.
+
+**3. Signal two: no information about authorship, and maxed out by empty input.**
+`style_signal` averages `1 / (1 + sentence_length_spread)` and `1 - type_token_ratio`. In the score-spread set the AI texts averaged 0.466 and the human texts 0.481, a gap of -0.016 against 0.253 on signal one. Input with no words (MF01, MF04, MF06, MF07) has spread 0 and vocabulary ratio 0, so the formula returns exactly 1.0, its most AI-like value. This is the designed blind spot: it measures shape, and empty input has none.
+
+**4. The combining rule: signal two dilutes signal one.**
+Criterion 2 needed a 0.20 gap and got 0.172 (AI 0.706, human 0.533) in all three trials. `0.70 * 0.253 - 0.30 * 0.016 = 0.172`, so the style signal can only shrink the gap. The GIMP false positive also hurts: without it the human mean is 0.486 and the gap is 0.219, which would pass. So the miss is one false positive plus a weak second signal. The rule also mishandles garbage: MF04's style score of 1.0 is outvoted by a model score of 0.0112, giving a combined 0.308 that reads as human. A 0.7/0.3 average never lets disagreement become "unsure"; the heavier signal just wins.
+
+**5. The label mapping: correct as written, but the thresholds decide who is accused.**
+`score_to_label` put every score in the right band and attacker text never reached a label (PI04 and PI05 held). The issue is the band edges. FP02 to FP07 combined to 0.68 to 0.79 and the AI attack EV10 to 0.895, so raising `AI_THRESHOLD` to about 0.80 would stop the six false accusations but push borderline AI cases (EV09 at 0.618, EV03 at 0.594) further from being caught. That trade lives in `config.py`, and right now it falls on the writer.
+
+**What held:** the rate limiter (6 per minute per `creator_id`) let six flood requests through and returned 429 for the rest, each logged with `reason: rate_limited`. The appeal path met criterion 4 when tested by hand.
+
+**Pattern:** the ten crashes are one missing validation step. The false positives, evasions and garbage scores all trace to signal one treating predictability as authorship, with signal two unable to correct it.
 
 ---
 

@@ -278,74 +278,86 @@ under **Rate Limiting**, and check GET /log recorded the rejections.
 
 ## Attack Run — Before
 
-<!-- Every attack with its outcome and a held-or-broke mark.
-     `run_attacks.py --label before` produces the table. -->
+`python run_attacks.py --label before --set attack_set`, written to `results/attack_run_2026-11-04_1753_before.md` (the same attacks and results as the earlier `results/attack_run_2026-11-04_1613.md`). All 56 attacks, each with its status, the service's guess and a HELD or BROKE mark.
+
+Rules for the marks: BROKE means the attack achieved its goal (AI text called human, human text called AI, a confident label on garbage, a crash, or bad input accepted). HELD means the service resisted, stayed unsure, or rate-limited. The script auto-marked the 10 crashes BROKE and left 46 for me to judge; the marks on those 46 are my judgment.
+
+| Family | Attacks | Auto-BROKE | My BROKE | HELD | Total BROKE | Which |
+|---|---|---|---|---|---|---|
+| evasion | 10 | 0 | 3 | 7 | 3 | EV01, EV05, EV08 (called human) |
+| false_positive | 8 | 0 | 6 | 2 | 6 | FP02–FP07 (genuine human text called AI) |
+| prompt_injection | 6 | 0 | 1 | 5 | 1 | PI02 (called human) |
+| malformed | 20 | 10 | 7 | 3 | 17 | 10 crashes (500); MF03–MF07 confident labels on garbage; RQ02, RQ06 bad `creator_id` accepted |
+| flood_same_creator | 12 | 0 | 0 | 12 | 0 | first 6 returned 200, last 6 returned 429 |
+| **Total** | **56** | **10** | **17** | **29** | **27** | |
+
+Full output:
 
 ```
- [ 1/56] EV01   evasion           200   human    ?
-  [ 2/56] EV02   evasion           200   unsure   ?
-  [ 3/56] EV03   evasion           200   unsure   ?
-  [ 4/56] EV04   evasion           200   unsure   ?
-  [ 5/56] EV05   evasion           200   human    ?
-  [ 6/56] EV06   evasion           200   unsure   ?
-  [ 7/56] EV07   evasion           200   unsure   ?
-  [ 8/56] EV08   evasion           200   human    ?
-  [ 9/56] EV09   evasion           200   unsure   ?
-  [10/56] EV10   evasion           200   ai       ?
-  [11/56] FP01   false_positive    200   unsure   ?
-  [12/56] FP02   false_positive    200   ai       ?
-  [13/56] FP03   false_positive    200   ai       ?
-  [14/56] FP04   false_positive    200   ai       ?
-  [15/56] FP05   false_positive    200   ai       ?
-  [16/56] FP06   false_positive    200   ai       ?
-  [17/56] FP07   false_positive    200   ai       ?
-  [18/56] FP08   false_positive    200   human    ?
-  [19/56] PI01   prompt_injection  200   unsure   ?
-  [20/56] PI02   prompt_injection  200   human    ?
-  [21/56] PI03   prompt_injection  200   unsure   ?
-  [22/56] PI04   prompt_injection  200   unsure   ?
-  [23/56] PI05   prompt_injection  200   unsure   ?
-  [24/56] PI06   prompt_injection  200   unsure   ?
-  [25/56] MF01   malformed         200   unsure   ?
+ [ 1/56] EV01   evasion           200   human    BROKE
+  [ 2/56] EV02   evasion           200   unsure   HELD
+  [ 3/56] EV03   evasion           200   unsure   HELD
+  [ 4/56] EV04   evasion           200   unsure   HELD
+  [ 5/56] EV05   evasion           200   human    BROKE
+  [ 6/56] EV06   evasion           200   unsure   HELD
+  [ 7/56] EV07   evasion           200   unsure   HELD
+  [ 8/56] EV08   evasion           200   human    BROKE
+  [ 9/56] EV09   evasion           200   unsure   HELD
+  [10/56] EV10   evasion           200   ai       HELD
+  [11/56] FP01   false_positive    200   unsure   HELD
+  [12/56] FP02   false_positive    200   ai       BROKE
+  [13/56] FP03   false_positive    200   ai       BROKE
+  [14/56] FP04   false_positive    200   ai       BROKE
+  [15/56] FP05   false_positive    200   ai       BROKE
+  [16/56] FP06   false_positive    200   ai       BROKE
+  [17/56] FP07   false_positive    200   ai       BROKE
+  [18/56] FP08   false_positive    200   human    HELD
+  [19/56] PI01   prompt_injection  200   unsure   HELD
+  [20/56] PI02   prompt_injection  200   human    BROKE
+  [21/56] PI03   prompt_injection  200   unsure   HELD
+  [22/56] PI04   prompt_injection  200   unsure   HELD
+  [23/56] PI05   prompt_injection  200   unsure   HELD
+  [24/56] PI06   prompt_injection  200   unsure   HELD
+  [25/56] MF01   malformed         200   unsure   HELD
   [26/56] MF02   malformed         500   —        BROKE
-  [27/56] MF03   malformed         200   human    ?
-  [28/56] MF04   malformed         200   human    ?
-  [29/56] MF05   malformed         200   ai       ?
-  [30/56] MF06   malformed         200   ai       ?
-  [31/56] MF07   malformed         200   ai       ?
-  [32/56] MF08   malformed         200   ai       ?
+  [27/56] MF03   malformed         200   human    BROKE
+  [28/56] MF04   malformed         200   human    BROKE
+  [29/56] MF05   malformed         200   ai       BROKE
+  [30/56] MF06   malformed         200   ai       BROKE
+  [31/56] MF07   malformed         200   ai       BROKE
+  [32/56] MF08   malformed         200   ai       HELD
   [33/56] RQ01   malformed         500   —        BROKE
-  [34/56] RQ02   malformed         200   human    ?
+  [34/56] RQ02   malformed         200   human    BROKE
   [35/56] RQ03   malformed         500   —        BROKE
   [36/56] RQ04   malformed         500   —        BROKE
   [37/56] RQ05   malformed         500   —        BROKE
-  [38/56] RQ06   malformed         200   human    ?
+  [38/56] RQ06   malformed         200   human    BROKE
   [39/56] RQ07   malformed         500   —        BROKE
   [40/56] RQ08   malformed         500   —        BROKE
   [41/56] RQ09   malformed         500   —        BROKE
   [42/56] RQ10   malformed         500   —        BROKE
-  [43/56] RQ11   malformed         429   —        ?
+  [43/56] RQ11   malformed         429   —        HELD
   [44/56] RQ12   malformed         500   —        BROKE
-  [45/56] FL01_01 flood_same_creator 200   human    ?
-  [46/56] FL01_02 flood_same_creator 200   human    ?
-  [47/56] FL01_03 flood_same_creator 200   human    ?
-  [48/56] FL01_04 flood_same_creator 200   human    ?
-  [49/56] FL01_05 flood_same_creator 200   human    ?
-  [50/56] FL01_06 flood_same_creator 200   human    ?
-  [51/56] FL01_07 flood_same_creator 429   —        ?
-  [52/56] FL01_08 flood_same_creator 429   —        ?
-  [53/56] FL01_09 flood_same_creator 429   —        ?
-  [54/56] FL01_10 flood_same_creator 429   —        ?
-  [55/56] FL01_11 flood_same_creator 429   —        ?
-  [56/56] FL01_12 flood_same_creator 429   —        ?
+  [45/56] FL01_01 flood_same_creator 200   human    HELD
+  [46/56] FL01_02 flood_same_creator 200   human    HELD
+  [47/56] FL01_03 flood_same_creator 200   human    HELD
+  [48/56] FL01_04 flood_same_creator 200   human    HELD
+  [49/56] FL01_05 flood_same_creator 200   human    HELD
+  [50/56] FL01_06 flood_same_creator 200   human    HELD
+  [51/56] FL01_07 flood_same_creator 429   —        HELD
+  [52/56] FL01_08 flood_same_creator 429   —        HELD
+  [53/56] FL01_09 flood_same_creator 429   —        HELD
+  [54/56] FL01_10 flood_same_creator 429   —        HELD
+  [55/56] FL01_11 flood_same_creator 429   —        HELD
+  [56/56] FL01_12 flood_same_creator 429   —        HELD
 
 ============================================================
 Wrote results\attack_run_2026-11-04_1753_before.md
   auto-marked BROKE: 10
-  left for you:      46
+  left for you:      46  (judged below: 29 HELD, 17 BROKE)
+  final:             27 BROKE, 29 HELD
 ============================================================
 ```
-
 
 **Twelve audit log entries from the run**
 
@@ -800,22 +812,48 @@ Criterion 2 needed a 0.20 gap and got 0.172 (AI 0.706, human 0.533) in all three
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** I added input validation at the top of `app.py::submit`, before any signal runs, plus `MAX_TEXT_CHARS = 10000` in `config.py`.
 
-**Which diagnosis pointed at it:**
+- A body that isn't a JSON object returns 422.
+- `text` that isn't a string, or is empty or whitespace-only, returns 422.
+- `text` over 10,000 characters returns 413.
+- A missing or non-string `creator_id` falls back to the caller's address (the same fallback the rate limiter uses) instead of being logged as given.
+- A `ValueError` from `detector.model_signal` (text with fewer than 3 tokens, like a single character) is caught and returned as 422.
+
+Errors are JSON, so callers no longer get the Werkzeug HTML error page. The scoring code is unchanged.
+
+**Which diagnosis pointed at it:** Diagnosis 1 (the route). All ten auto-BROKE attacks were 500s from `app.py::submit` handing unchecked input to the detector, and criterion 5 was missed 0 of 4 in all three trials. I picked it because it has no cost on the other side: rejecting a request that was never a real submission accuses no one. I did not touch the signals, the weights or the thresholds, so everything traced to signal one is unchanged on purpose.
 
 ### Attack Run — After
 
-<!-- Same format. `run_attacks.py --label after` -->
+`python run_attacks.py --label after --set attack_set`, written to `results/attack_run_2026-11-04_2020_after.md`. Judged with the same rules as the before run.
 
+| Family | Before: BROKE | After: BROKE | What moved |
+|---|---|---|---|
+| evasion | 3 (EV01, EV05, EV08) | 3 | unchanged |
+| false_positive | 6 (FP02–FP07) | 6 | unchanged |
+| prompt_injection | 1 (PI02) | 1 | unchanged |
+| malformed | 17 | 5 (MF03–MF07) | all 10 crashes now 422; MF01 422, MF02 422, MF08 413; RQ02 and RQ06 now accepted with the address as `creator_id` |
+| flood_same_creator | 0 | 0 | unchanged (first 6 pass, last 6 get 429) |
+| **Total** | **27 of 56** | **15 of 56** | |
 
+Auto-marked BROKE (5xx or crash) went from 10 to 0. Status codes for the malformed rows, after:
 
-**Did it help, and how do I know:**
+```
+MF01 422   MF02 422   MF08 413   RQ01 422   RQ03 422   RQ04 422
+RQ05 422   RQ07 422   RQ08 422   RQ09 422   RQ10 422   RQ12 422
+RQ02 200 (creator_id -> 127.0.0.1)   RQ06 200 (creator_id -> 127.0.0.1)
+```
 
-<!-- Widening the unsure band usually fixes one problem and creates another.
-     Reporting that trade honestly is worth full credit. -->
+Criterion 5, `python run_eval.py --label after` (`results/run_2026-11-04_2020_after.md`): **4 of 4 correct in all three trials** (missing `text` 422, empty 422, whitespace 422, 10,001 characters 413), up from 0 of 4. Criteria 1 and 3 are unchanged (met), criterion 2 is unchanged (0.172 gap, still missed). The same results held in all three trials.
 
+**Did it help, and how do I know:** It fixed what it targeted and nothing else. Crashes went from 10 to 0, criterion 5 went from missed to met, and the BROKE count dropped from 27 to 15. The 15 that remain are all scores from the signals, and the scores are identical to the before run (for example FP03 is still 0.8051 on the model signal), which is evidence the validation did not change the scoring. That also confirms the diagnosis: the crashes were one missing check, and what's left is signal one reading predictability as authorship.
 
+There is a trade, but it is small. The 10,000-character cap rejects long documents that were previously scored (on only their first 400 tokens), and a writer who sends a missing `creator_id` is now logged under their IP address, which can be shared by many people and share a rate-limit bucket.
+
+Two things this did not fix:
+- MF03 (control characters), MF04 (punctuation only), MF05 (one long word), MF06 (emoji) and MF07 (right-to-left script) are still scored with a confident label. They are non-empty strings, so validation passes them. I chose not to add a minimum word count because it would also reject FP08, which is genuine human text.
+- RQ11 still returns 429, not a result. It shares the address bucket with the other requests that have no `creator_id`, so it still never tested content-type handling. A malformed body without a `creator_id` is not exempt from the limiter.
 
 ---
 

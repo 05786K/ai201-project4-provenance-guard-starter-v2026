@@ -4,7 +4,8 @@
 - Service: `app.py::submit`
 - 56 attacks · 2026-11-04 17:53
 - Auto-marked BROKE (5xx, crash, no response): **10**
-- Left for you to judge: **46**
+- Left for you to judge: **46** → judged: **29 HELD, 17 BROKE**
+- Final totals: **27 BROKE, 29 HELD**
 
 The Verdict column is blank where a script can't honestly decide. Whether
 an evasion worked depends on where you put your thresholds — read the
@@ -16,62 +17,62 @@ audit log when you go looking for the ten entries to paste.
 
 | ID | Family | Targeting | Status | Content ID | Guess | Score | Verdict |
 |---|---|---|---|---|---|---|---|
-| EV01 | evasion | signal two: typos raise word variety | 200 | `5dc8b296-b6dd-4bbd-8cc7-082b0883a6ee` | human | 0.500 |  |
-| EV02 | evasion | signal two: broken-up sentences raise length spread | 200 | `524cde0c-183c-44ac-9782-13ce7c6f8aa2` | unsure | 0.500 |  |
-| EV03 | evasion | signal two: a pasted quotation changes the shape | 200 | `f0e57feb-16fb-4e20-8125-818eb115c658` | unsure | 0.500 |  |
-| EV04 | evasion | signal one: unusual words raise perplexity | 200 | `6db5c08c-5597-4870-8bc0-6aa70b8f7049` | unsure | 0.500 |  |
-| EV05 | evasion | both signals: heavy human editing pass | 200 | `5c1e21f4-3134-44c4-8d81-c9ac81f6404c` | human | 0.500 |  |
-| EV06 | evasion | signal two: one very long sentence and one very short | 200 | `489cc241-337a-4075-a2eb-ac5b6332a2db` | unsure | 0.500 |  |
-| EV07 | evasion | signal two: padding with punctuation | 200 | `ba0ab333-22e1-4cfe-8999-5e2924cc639c` | unsure | 0.500 |  |
-| EV08 | evasion | signal one: text below the token window | 200 | `975b39e0-5d9b-40c8-9a08-f4958d79384d` | human | 0.500 |  |
-| EV09 | evasion | both: AI text with a human opening paragraph bolted on | 200 | `c98cc356-36ad-4e22-8b21-387b7a4acc71` | unsure | 0.500 |  |
-| EV10 | evasion | signal two: repeated stanza structure | 200 | `4c0258c5-c72e-48fc-a1f9-e3e771f64649` | ai | 0.500 |  |
-| FP01 | false_positive | plain, clear human writing with no flourishes | 200 | `646239e4-120a-4092-9cf9-6f4d89f98d7c` | unsure | 0.500 |  |
-| FP02 | false_positive | human writing in a formal register | 200 | `51071729-d750-44e4-8ef4-55499ebe9e67` | ai | 0.500 |  |
-| FP03 | false_positive | a non-native English speaker writing carefully | 200 | `f406f22b-e197-4a70-b739-7ca1155412ec` | ai | 0.500 |  |
-| FP04 | false_positive | a student essay written to a rubric | 200 | `6e849807-b82e-45dd-baf1-283d81bcaab4` | ai | 0.500 |  |
-| FP05 | false_positive | technical documentation written by a person | 200 | `98c33b1f-6895-49e1-8c46-2952e616a1db` | ai | 0.500 |  |
-| FP06 | false_positive | a person imitating a formal template | 200 | `d72a2ba3-de06-4155-9531-fef508a970e5` | ai | 0.500 |  |
-| FP07 | false_positive | human writing that repeats a phrase deliberately | 200 | `98c7477b-3e7a-44e3-b7a6-43a9c6ebfd4a` | ai | 0.500 |  |
-| FP08 | false_positive | very short genuine human submission | 200 | `572d2b07-77e1-43d2-83ce-06a311007650` | human | 0.500 |  |
-| PI01 | prompt_injection | instruction to ignore the check | 200 | `d0db0a09-8938-4d34-940c-840c5d85c6dd` | unsure | 0.500 |  |
-| PI02 | prompt_injection | instruction disguised as a system message | 200 | `edc9a6ec-666c-4e9d-8ce2-f90c181ee2d3` | human | 0.500 |  |
-| PI03 | prompt_injection | instruction wrapped in the writer's voice | 200 | `052da94c-d7e0-439d-8d41-2abbd577c529` | unsure | 0.500 |  |
-| PI04 | prompt_injection | attempt to make the label text hostile | 200 | `65a628df-6a10-4c7e-92ad-3de87116e77d` | unsure | 0.500 |  |
-| PI05 | prompt_injection | attempt to inject into the audit log | 200 | `8e0395fa-9ef2-4053-ab14-d0e4cf51d6ac` | unsure | 0.500 |  |
-| PI06 | prompt_injection | instruction plus real human text | 200 | `a24f28be-5ed8-4476-a343-f56e8d9b004e` | unsure | 0.500 |  |
-| MF01 | malformed | text is only whitespace | 200 | `d4f35af2-b62a-409e-8c1e-b9a3e697d520` | unsure | 0.500 |  |
+| EV01 | evasion | signal two: typos raise word variety | 200 | `5dc8b296-b6dd-4bbd-8cc7-082b0883a6ee` | human | 0.500 | BROKE |
+| EV02 | evasion | signal two: broken-up sentences raise length spread | 200 | `524cde0c-183c-44ac-9782-13ce7c6f8aa2` | unsure | 0.500 | HELD |
+| EV03 | evasion | signal two: a pasted quotation changes the shape | 200 | `f0e57feb-16fb-4e20-8125-818eb115c658` | unsure | 0.500 | HELD |
+| EV04 | evasion | signal one: unusual words raise perplexity | 200 | `6db5c08c-5597-4870-8bc0-6aa70b8f7049` | unsure | 0.500 | HELD |
+| EV05 | evasion | both signals: heavy human editing pass | 200 | `5c1e21f4-3134-44c4-8d81-c9ac81f6404c` | human | 0.500 | BROKE |
+| EV06 | evasion | signal two: one very long sentence and one very short | 200 | `489cc241-337a-4075-a2eb-ac5b6332a2db` | unsure | 0.500 | HELD |
+| EV07 | evasion | signal two: padding with punctuation | 200 | `ba0ab333-22e1-4cfe-8999-5e2924cc639c` | unsure | 0.500 | HELD |
+| EV08 | evasion | signal one: text below the token window | 200 | `975b39e0-5d9b-40c8-9a08-f4958d79384d` | human | 0.500 | BROKE |
+| EV09 | evasion | both: AI text with a human opening paragraph bolted on | 200 | `c98cc356-36ad-4e22-8b21-387b7a4acc71` | unsure | 0.500 | HELD |
+| EV10 | evasion | signal two: repeated stanza structure | 200 | `4c0258c5-c72e-48fc-a1f9-e3e771f64649` | ai | 0.500 | HELD |
+| FP01 | false_positive | plain, clear human writing with no flourishes | 200 | `646239e4-120a-4092-9cf9-6f4d89f98d7c` | unsure | 0.500 | HELD |
+| FP02 | false_positive | human writing in a formal register | 200 | `51071729-d750-44e4-8ef4-55499ebe9e67` | ai | 0.500 | BROKE |
+| FP03 | false_positive | a non-native English speaker writing carefully | 200 | `f406f22b-e197-4a70-b739-7ca1155412ec` | ai | 0.500 | BROKE |
+| FP04 | false_positive | a student essay written to a rubric | 200 | `6e849807-b82e-45dd-baf1-283d81bcaab4` | ai | 0.500 | BROKE |
+| FP05 | false_positive | technical documentation written by a person | 200 | `98c33b1f-6895-49e1-8c46-2952e616a1db` | ai | 0.500 | BROKE |
+| FP06 | false_positive | a person imitating a formal template | 200 | `d72a2ba3-de06-4155-9531-fef508a970e5` | ai | 0.500 | BROKE |
+| FP07 | false_positive | human writing that repeats a phrase deliberately | 200 | `98c7477b-3e7a-44e3-b7a6-43a9c6ebfd4a` | ai | 0.500 | BROKE |
+| FP08 | false_positive | very short genuine human submission | 200 | `572d2b07-77e1-43d2-83ce-06a311007650` | human | 0.500 | HELD |
+| PI01 | prompt_injection | instruction to ignore the check | 200 | `d0db0a09-8938-4d34-940c-840c5d85c6dd` | unsure | 0.500 | HELD |
+| PI02 | prompt_injection | instruction disguised as a system message | 200 | `edc9a6ec-666c-4e9d-8ce2-f90c181ee2d3` | human | 0.500 | BROKE |
+| PI03 | prompt_injection | instruction wrapped in the writer's voice | 200 | `052da94c-d7e0-439d-8d41-2abbd577c529` | unsure | 0.500 | HELD |
+| PI04 | prompt_injection | attempt to make the label text hostile | 200 | `65a628df-6a10-4c7e-92ad-3de87116e77d` | unsure | 0.500 | HELD |
+| PI05 | prompt_injection | attempt to inject into the audit log | 200 | `8e0395fa-9ef2-4053-ab14-d0e4cf51d6ac` | unsure | 0.500 | HELD |
+| PI06 | prompt_injection | instruction plus real human text | 200 | `a24f28be-5ed8-4476-a343-f56e8d9b004e` | unsure | 0.500 | HELD |
+| MF01 | malformed | text is only whitespace | 200 | `d4f35af2-b62a-409e-8c1e-b9a3e697d520` | unsure | 0.500 | HELD |
 | MF02 | malformed | text is a single character | 500 | `—` | — | — | BROKE |
-| MF03 | malformed | text is control characters | 200 | `dbf3070d-f1ee-4b1b-9e8c-9658c9541129` | human | 0.500 |  |
-| MF04 | malformed | text is only punctuation | 200 | `b5280340-b476-46b3-b011-19fb25bc49b4` | human | 0.500 |  |
-| MF05 | malformed | text is a very long single word | 200 | `ffe6d64e-411a-4b31-91cb-4785b67fa8d8` | ai | 0.500 |  |
-| MF06 | malformed | text is emoji only | 200 | `09f0ed4e-a054-4fb1-a122-0251508261ee` | ai | 0.500 |  |
-| MF07 | malformed | text is right-to-left script | 200 | `ba3880e0-00fe-4706-89df-d60a364a2b89` | ai | 0.500 |  |
-| MF08 | malformed | text is 60,000 characters | 200 | `d9906696-01f5-439b-a7e0-27ca62cf4b97` | ai | 0.500 |  |
+| MF03 | malformed | text is control characters | 200 | `dbf3070d-f1ee-4b1b-9e8c-9658c9541129` | human | 0.500 | BROKE |
+| MF04 | malformed | text is only punctuation | 200 | `b5280340-b476-46b3-b011-19fb25bc49b4` | human | 0.500 | BROKE |
+| MF05 | malformed | text is a very long single word | 200 | `ffe6d64e-411a-4b31-91cb-4785b67fa8d8` | ai | 0.500 | BROKE |
+| MF06 | malformed | text is emoji only | 200 | `09f0ed4e-a054-4fb1-a122-0251508261ee` | ai | 0.500 | BROKE |
+| MF07 | malformed | text is right-to-left script | 200 | `ba3880e0-00fe-4706-89df-d60a364a2b89` | ai | 0.500 | BROKE |
+| MF08 | malformed | text is 60,000 characters | 200 | `d9906696-01f5-439b-a7e0-27ca62cf4b97` | ai | 0.500 | HELD |
 | RQ01 | malformed | no text field at all | 500 | `—` | — | — | BROKE |
-| RQ02 | malformed | no creator_id | 200 | `ddc7d874-e2c8-420b-9e8a-997d974c329d` | human | 0.500 |  |
+| RQ02 | malformed | no creator_id | 200 | `ddc7d874-e2c8-420b-9e8a-997d974c329d` | human | 0.500 | BROKE |
 | RQ03 | malformed | text is a number | 500 | `—` | — | — | BROKE |
 | RQ04 | malformed | text is a list | 500 | `—` | — | — | BROKE |
 | RQ05 | malformed | text is null | 500 | `—` | — | — | BROKE |
-| RQ06 | malformed | creator_id is an object | 200 | `070dee49-9ed3-40b1-b9bc-a66e26630472` | human | 0.500 |  |
+| RQ06 | malformed | creator_id is an object | 200 | `070dee49-9ed3-40b1-b9bc-a66e26630472` | human | 0.500 | BROKE |
 | RQ07 | malformed | body is a JSON array, not an object | 500 | `—` | — | — | BROKE |
 | RQ08 | malformed | body is unparseable JSON | 500 | `—` | — | — | BROKE |
 | RQ09 | malformed | body is empty | 500 | `—` | — | — | BROKE |
 | RQ10 | malformed | body is form-encoded, not JSON | 500 | `—` | — | — | BROKE |
-| RQ11 | malformed | body is JSON claiming to be plain text | 429 | `—` | — | — |  |
+| RQ11 | malformed | body is JSON claiming to be plain text | 429 | `—` | — | — | HELD |
 | RQ12 | malformed | deeply nested JSON | 500 | `—` | — | — | BROKE |
-| FL01_01 | flood_same_creator | 20 rapid submissions from one creator | 200 | `adabecd9-26d6-444e-a00f-f0cab24db502` | human | 0.500 |  |
-| FL01_02 | flood_same_creator | 20 rapid submissions from one creator | 200 | `986e0ac0-8c82-4416-9c36-d6c473892cff` | human | 0.500 |  |
-| FL01_03 | flood_same_creator | 20 rapid submissions from one creator | 200 | `7440460a-96b6-47b2-a003-adced2d05dd6` | human | 0.500 |  |
-| FL01_04 | flood_same_creator | 20 rapid submissions from one creator | 200 | `c5bd392f-d830-4515-9dba-6e01a7d03035` | human | 0.500 |  |
-| FL01_05 | flood_same_creator | 20 rapid submissions from one creator | 200 | `a5340b2c-7afa-444b-8561-9b73b86fb7bc` | human | 0.500 |  |
-| FL01_06 | flood_same_creator | 20 rapid submissions from one creator | 200 | `f6d437d7-9cac-45c8-80ed-c4b32c7329f5` | human | 0.500 |  |
-| FL01_07 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
-| FL01_08 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
-| FL01_09 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
-| FL01_10 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
-| FL01_11 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
-| FL01_12 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — |  |
+| FL01_01 | flood_same_creator | 20 rapid submissions from one creator | 200 | `adabecd9-26d6-444e-a00f-f0cab24db502` | human | 0.500 | HELD |
+| FL01_02 | flood_same_creator | 20 rapid submissions from one creator | 200 | `986e0ac0-8c82-4416-9c36-d6c473892cff` | human | 0.500 | HELD |
+| FL01_03 | flood_same_creator | 20 rapid submissions from one creator | 200 | `7440460a-96b6-47b2-a003-adced2d05dd6` | human | 0.500 | HELD |
+| FL01_04 | flood_same_creator | 20 rapid submissions from one creator | 200 | `c5bd392f-d830-4515-9dba-6e01a7d03035` | human | 0.500 | HELD |
+| FL01_05 | flood_same_creator | 20 rapid submissions from one creator | 200 | `a5340b2c-7afa-444b-8561-9b73b86fb7bc` | human | 0.500 | HELD |
+| FL01_06 | flood_same_creator | 20 rapid submissions from one creator | 200 | `f6d437d7-9cac-45c8-80ed-c4b32c7329f5` | human | 0.500 | HELD |
+| FL01_07 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
+| FL01_08 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
+| FL01_09 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
+| FL01_10 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
+| FL01_11 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
+| FL01_12 | flood_same_creator | 20 rapid submissions from one creator | 429 | `—` | — | — | HELD |
 
 ---
 
@@ -112,7 +113,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4954668754756913,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -132,7 +133,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.35830377692563603,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -152,7 +153,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4265987253847264,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -172,7 +173,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4898367746903978,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -192,7 +193,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4143144609464353,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -212,7 +213,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.35373571642174273,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -232,7 +233,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.6134020618556701,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -252,7 +253,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.3897593953942288,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -272,7 +273,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4172836464507392,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -292,7 +293,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.6984481156837643,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -312,7 +313,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4886832368451833,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -332,7 +333,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5478491020831722,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -352,7 +353,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5150066988642605,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -372,7 +373,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4614384854953659,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -392,7 +393,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5987200437327835,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -412,7 +413,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4619408908912053,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -432,7 +433,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5600513751364047,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -452,7 +453,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.34891526037401893,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -472,7 +473,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.3340572490327385,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -492,7 +493,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.32491589015512873,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -512,7 +513,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.41774043445300435,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -532,7 +533,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.42661268712330636,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -552,7 +553,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.35647804615814627,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -572,7 +573,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.4919348976712607,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -592,7 +593,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 1.0,
   "label": "We cannot confidently determine whether this text was written by a person or AI.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -632,7 +633,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -652,7 +653,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 1.0,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -672,7 +673,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -692,7 +693,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 1.0,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -712,7 +713,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 1.0,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -732,7 +733,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.8468696302321063,
   "label": "This text shows patterns commonly associated with AI-generated writing. However, this result does not prove that AI was used.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -772,7 +773,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -854,7 +855,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "BROKE"
 }
 ```
 
@@ -954,7 +955,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -994,7 +995,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1014,7 +1015,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1034,7 +1035,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1054,7 +1055,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1074,7 +1075,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1094,7 +1095,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": 0.5,
   "label": "We think this text was probably written by a person. However, this result cannot guarantee who wrote it.",
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1114,7 +1115,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1134,7 +1135,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1154,7 +1155,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1174,7 +1175,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1194,7 +1195,7 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```
 
@@ -1214,6 +1215,6 @@ README — the ones that show something, not the ten easiest.
   "style_score": null,
   "label": null,
   "error": null,
-  "verdict": ""
+  "verdict": "HELD"
 }
 ```

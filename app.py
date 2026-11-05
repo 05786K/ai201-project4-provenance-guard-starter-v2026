@@ -203,13 +203,38 @@ def submit():
     a malformed input is one of the most common real failures there is.
     """
 
-    # TODO: delete this and build the route.
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
 
-    text = payload.get("text", "")
-    creator_id = payload.get("creator_id", "")
+    if not isinstance(payload, dict):
+        return jsonify({
+            "error": "invalid_request",
+            "message": "Request body must be a JSON object.",
+        }), 422
 
-    model_score = detector.model_signal(text)
+    text = payload.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({
+            "error": "invalid_text",
+            "message": "`text` must be a non-empty string.",
+        }), 422
+
+    if len(text) > config.MAX_TEXT_CHARS:
+        return jsonify({
+            "error": "text_too_long",
+            "message": f"`text` must be at most {config.MAX_TEXT_CHARS} characters.",
+        }), 413
+
+    # A missing or non-string creator_id falls back to the caller's address,
+    # the same fallback the rate limiter uses.
+    creator_id = payload.get("creator_id")
+    if not isinstance(creator_id, str) or not creator_id.strip():
+        creator_id = request.remote_addr or "unknown"
+
+    try:
+        model_score = detector.model_signal(text)
+    except ValueError as exc:
+        # Too few tokens to score (e.g. a single character).
+        return jsonify({"error": "invalid_text", "message": str(exc)}), 422
     content_id = str(uuid.uuid4())
 
     style_score = stylometry.style_signal(text)

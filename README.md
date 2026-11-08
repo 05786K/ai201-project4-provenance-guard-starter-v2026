@@ -22,6 +22,8 @@
 > Everything this unit is filling in the middle.
 >
 > **The rest of this file is your submission.** Fill it in as you go.
+>
+> **Unit 9 (capstone) sections:** [What This Extends](#unit-9--what-this-extends) · [The Shape](#unit-9--the-shape) · [Running It](#unit-9--running-it) · [Instrumentation](#unit-9--instrumentation) · [What It Costs](#unit-9--what-it-costs). They are at the bottom of this file, after Unit 8's "What's Still Broken".
 
 ---
 
@@ -943,6 +945,77 @@ Signal two separates the groups by -0.016, so it only dilutes signal one's 0.253
 
 **The trade I'd make if this ran for real:**
 I'd go toward fewer wrong accusations: raise the AI threshold so "ai" is reserved for the clearest cases, and keep the appeal path. The cost of that falls on the site and on readers and honest writers who compete with undetected AI text, and I'd accept that over making a second-language writer like FP03 pay for a wrong label about their own work.
+
+---
+
+# Unit 9 — Capstone
+
+Everything above this line is Units 7 and 8 and is left as submitted. Everything below is new in Unit 9. Entries marked `TBD` are filled in only after the system has actually been run and measured; nothing in those places is an estimate.
+
+---
+
+## Unit 9 — What This Extends
+
+**System extended:** Provenance Guard, the same repository and the same service built in Units 7 and 8. It is a Flask web service that scores a piece of text two ways (GPT-2 perplexity, and a stylometry signal), combines the two scores, returns a `human` / `unsure` / `ai` label, writes each decision to `logs/audit.jsonl`, and accepts appeals at `/appeal`. It is not being rewritten, and its detection logic is not being changed.
+
+**What is new:** an operational layer around the existing service, so that its behavior can be seen after the fact:
+
+- A per-request **ops log** (`logs/requests.jsonl`, one JSON object per line). It records a timestamp, a request ID, the route, the status code, what came in (text length and a short hash, not the raw text), what came out, total duration, the time spent in each stage (GPT-2, stylometry, scoring, audit write) and CPU time. Rejected and failed requests get lines too.
+- A **request ID** on every response, so a response can be matched to its log line.
+- A documented local **run path** (`waitress`) with a `RUNNING.md` that has been followed from a clean checkout.
+- A small `summarize_log.py` that reads the ops log back and reports counts, error rate and latency percentiles.
+- A measured **cost per run**.
+
+The Unit 7/8 audit log stays the record of *decisions*. The ops log is the record of *requests*. They are separate files on purpose, so the audit log's shape does not change.
+
+---
+
+## Unit 9 — The Shape
+
+**Shape A — Deploy and instrument.** The extension is the operational layer described above: the run path, the instrumentation, and the numbers that come out of it. Provenance Guard has only ever run from my editor and Flask's development server. This unit puts it behind a documented start command and makes its behavior measurable.
+
+**Deployment path: Path B, local with logs.** The system carries a local GPT-2 model (about 550 MB on disk, loaded into memory), which does not fit a free 512 MB hosted tier. No cloud deployment is attempted.
+
+**Out of scope** (considered and deliberately not done):
+
+- **No cloud or hosted deployment**, and no containers.
+- **No changes to the detection logic.** The signals, the weights (0.70 / 0.30) and the label thresholds (0.35 / 0.65) stay as they were at the end of Unit 8. One Unit 9 criterion checks that scores did not change.
+- **No metrics server or dashboard.** No `/metrics` endpoint and no Prometheus. Counts and latency come from reading the ops log back with `summarize_log.py`.
+- **No fixes for the Unit 8 leftovers** (the false positives, `confidence` hard-coded to 0.5, the empty-`reasoning` appeal). Those belong to Unit 8's "What's Still Broken", and the improvements this unit are chosen from this unit's own diagnosis.
+
+**Stretch items I am declaring before building them** (committed before any of them are built):
+
+1. **A second measured improvement** (+2): a second change drawn from the diagnosis, with a third run log in the same table format and a statement of whether it helped.
+2. **A latency breakdown** (+1): where the time goes across the stages of one run, measured, with the numbers here and a sentence on which stage dominates.
+3. **A load observation** (+1): the service run at roughly ten times its normal rate, with a report on what changed.
+
+Not attempting: "both run paths" (it needs a hosted deployment).
+
+---
+
+## Unit 9 — Running It
+
+**Path B — local with logs.** `RUNNING.md` is the authoritative run path; this section is a summary and will be completed once the instructions have been tested from a clean checkout.
+
+| Item | Value |
+|---|---|
+| Python | 3.13.13 in the project's `.venv` (the starter supports 3.11, 3.12 and 3.13, not 3.14) |
+| Dependencies | pinned with lower and upper bounds in `requirements.txt` (Flask, Flask-Limiter, requests, transformers, torch, certifi); `waitress` to be added |
+| Model | `gpt2`, about 550 MB, downloaded once into the Hugging Face cache |
+| Start command | TBD (`waitress`; fallback `python app.py` with `AI201_DEBUG=0`) |
+| Clean-checkout test | TBD (what I had to fix in `RUNNING.md` is recorded here) |
+
+---
+
+## Unit 9 — Instrumentation
+
+TBD. This section will hold the ops-log field list and at least ten real entries pasted as text, including at least one rejected or failed request.
+
+---
+
+## Unit 9 — What It Costs
+
+TBD. This section will hold the measured per-request cost (CPU seconds and wall seconds, averaged over ten runs), how it was measured, and the hundred-a-day arithmetic.
 
 ---
 

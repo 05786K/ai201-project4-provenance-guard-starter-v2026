@@ -24,17 +24,43 @@ Routes:
     GET  /health      is the service up, and is the model loaded
 """
 
+import time
 import uuid
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
 import audit
 import config
 import detector
+import ops
 import stylometry
 import scoring
 
 app = Flask(__name__)
+
+
+# ── Ops log and request IDs — UNIT 9 ──────────────────────────────────────────
+# Registered BEFORE the rate limiter below on purpose: Flask runs before_request
+# hooks in registration order, and a 429 is raised by the limiter's hook. If this
+# one came after, a rate-limited request would never get an ID or a start time.
+#
+# One place sees every response, so every outcome (200, 422, 413, 429, 404,
+# 500) leaves exactly one line in logs/requests.jsonl.
+
+@app.before_request
+def _ops_start():
+    g.request_id = ops.new_request_id()
+    g.t0 = time.perf_counter()
+
+
+@app.after_request
+def _ops_finish(response):
+    request_id = getattr(g, "request_id", None) or ops.new_request_id()
+    t0 = getattr(g, "t0", None)
+    duration_ms = (time.perf_counter() - t0) * 1000 if t0 is not None else 0.0
+    response.headers["X-Request-ID"] = request_id
+    ops.write(ops.build_entry(request_id, request, response, duration_ms))
+    return response
 
 
 # ── Rate limiting — UNIT 8 ────────────────────────────────────────────────────
@@ -230,34 +256,43 @@ def submit():
     if not isinstance(creator_id, str) or not creator_id.strip():
         creator_id = request.remote_addr or "unknown"
 
+    # UNIT 9: each stage below runs inside ops.stage(...), which only records how
+    # long it took into this request's ops-log line. `model_cold` notes that this
+    # request had to load GPT-2, so the slow first request is visible as such.
+    g.model_cold = detector._model is None
+
     try:
-        model_score = detector.model_signal(text)
+        with ops.stage("gpt2"):
+            model_score = detector.model_signal(text)
     except ValueError as exc:
         # Too few tokens to score (e.g. a single character).
         return jsonify({"error": "invalid_text", "message": str(exc)}), 422
     content_id = str(uuid.uuid4())
 
-    style_score = stylometry.style_signal(text)
+    with ops.stage("style"):
+        style_score = stylometry.style_signal(text)
 
-    combined_score = scoring.combine_signals(
-        model_score,
-        style_score
-    )
+    with ops.stage("scoring"):
+        combined_score = scoring.combine_signals(
+            model_score,
+            style_score
+        )
 
-    guess, label = scoring.score_to_label(combined_score)
+        guess, label = scoring.score_to_label(combined_score)
     confidence = 0.5
 
 
-    audit.log_decision(
-        content_id=content_id,
-        creator_id=creator_id,
-        guess=guess,
-        model_score=model_score,
-        style_score=style_score,
-        combined_score=combined_score,
-        label=label,
-        status="decided",
-    )
+    with ops.stage("audit"):
+        audit.log_decision(
+            content_id=content_id,
+            creator_id=creator_id,
+            guess=guess,
+            model_score=model_score,
+            style_score=style_score,
+            combined_score=combined_score,
+            label=label,
+            status="decided",
+        )
 
     return jsonify({
         "content_id": content_id,

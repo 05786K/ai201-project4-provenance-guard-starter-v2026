@@ -19,12 +19,37 @@ Logging must never break a request: `write` swallows its own errors.
 import hashlib
 import json
 import threading
+import time
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
+
+from flask import g
 
 import config
 
 _lock = threading.Lock()
+
+
+@contextmanager
+def stage(name: str):
+    """
+    Time one stage of a request and file it under `stage_ms` in that request's
+    log line. It records even if the stage raises, and never changes what the
+    stage does. Outside a request it just runs the block.
+    """
+    t0 = time.perf_counter()
+    try:
+        yield
+    finally:
+        try:
+            ms = (time.perf_counter() - t0) * 1000
+            stages = g.get("stage_ms")
+            if stages is None:
+                stages = g.stage_ms = {}
+            stages[name] = round(stages.get(name, 0.0) + ms, 2)
+        except RuntimeError:  # no request context
+            pass
 
 # Only these routes get their response body parsed for the log; /log and
 # /health bodies are large or uninteresting.
@@ -82,6 +107,8 @@ def build_entry(request_id, request, response, duration_ms) -> dict:
         "model_score": body.get("model_score"),
         "style_score": body.get("style_score"),
         "combined_score": body.get("combined_score"),
+        "model_cold": g.get("model_cold"),
+        "stage_ms": g.get("stage_ms"),
     }
 
 

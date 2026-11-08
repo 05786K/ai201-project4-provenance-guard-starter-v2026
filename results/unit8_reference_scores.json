@@ -1,0 +1,315 @@
+{
+  "description": "Unit 8 reference scores, frozen before any Unit 9 code change.",
+  "method": "app.py::submit via Flask test client, texts from scenarios.py, AI201_RATE_LIMITS=0, audit log redirected to a temp file, run twice.",
+  "python": "3.13.13",
+  "detector_model": "gpt2",
+  "weights": [
+    0.7,
+    0.3
+  ],
+  "thresholds": [
+    0.35,
+    0.65
+  ],
+  "count": 27,
+  "two_passes_identical": true,
+  "scores": [
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 1,
+      "text_sha8": "d8040c07",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.8062,
+      "style_score": 0.5608874019170043,
+      "combined_score": 0.7326062205751012
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 2,
+      "text_sha8": "81c8a9ae",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.4635,
+      "style_score": 0.4397760702021965,
+      "combined_score": 0.45638282106065897
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 3,
+      "text_sha8": "d7e0bf6d",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5751,
+      "style_score": 0.45761994855822524,
+      "combined_score": 0.5398559845674675
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 4,
+      "text_sha8": "cc2ff262",
+      "status": 200,
+      "guess": "human",
+      "model_score": 0.221,
+      "style_score": 0.4527990387582848,
+      "combined_score": 0.29053971162748543
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 5,
+      "text_sha8": "57b98de9",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5445,
+      "style_score": 0.5503902496747589,
+      "combined_score": 0.5462670749024277
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 6,
+      "text_sha8": "6de12dcb",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.456,
+      "style_score": 0.5520677419595373,
+      "combined_score": 0.4848203225878612
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 7,
+      "text_sha8": "ba69c50b",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.3446,
+      "style_score": 0.47024747632741204,
+      "combined_score": 0.38229424289822356
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 8,
+      "text_sha8": "b818ab58",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5824,
+      "style_score": 0.523294654018869,
+      "combined_score": 0.5646683962056607
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 9,
+      "text_sha8": "73f84628",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.4018,
+      "style_score": 0.5335729453668189,
+      "combined_score": 0.4413318836100456
+    },
+    {
+      "scenario": "my own writing",
+      "criterion": 1,
+      "index": 10,
+      "text_sha8": "18758163",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.3353,
+      "style_score": 0.4807926013898646,
+      "combined_score": 0.37894778041695937
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 1,
+      "text_sha8": "e8b32ef7",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.7191,
+      "style_score": 0.4975991026808101,
+      "combined_score": 0.652649730804243
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 2,
+      "text_sha8": "185c4c56",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.9315,
+      "style_score": 0.4887578749998101,
+      "combined_score": 0.7986773624999429
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 3,
+      "text_sha8": "a248f991",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.8354,
+      "style_score": 0.415785855065232,
+      "combined_score": 0.7095157565195696
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 4,
+      "text_sha8": "1553d992",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.8571,
+      "style_score": 0.441374509052427,
+      "combined_score": 0.732382352715728
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 5,
+      "text_sha8": "c15b2cac",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.7009,
+      "style_score": 0.4846153846153846,
+      "combined_score": 0.6360146153846153
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 6,
+      "text_sha8": "f5d37279",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.8054,
+      "style_score": 0.5275820271799756,
+      "combined_score": 0.7220546081539926
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 7,
+      "text_sha8": "66df6fe7",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.3686,
+      "style_score": 0.3457109452053455,
+      "combined_score": 0.3617332835616036
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 8,
+      "text_sha8": "2b1e593c",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5311,
+      "style_score": 0.5015531779209179,
+      "combined_score": 0.5222359533762754
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 9,
+      "text_sha8": "607b1909",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5741,
+      "style_score": 0.47338000286720444,
+      "combined_score": 0.5438840008601613
+    },
+    {
+      "scenario": "score spread",
+      "criterion": 2,
+      "index": 10,
+      "text_sha8": "8561d09c",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.4999,
+      "style_score": 0.558661052885839,
+      "combined_score": 0.5175283158657517
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 1,
+      "text_sha8": "d1b4572c",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.7374,
+      "style_score": 0.4735877351967195,
+      "combined_score": 0.6582563205590158
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 2,
+      "text_sha8": "1d55aa38",
+      "status": 200,
+      "guess": "human",
+      "model_score": 0.2877,
+      "style_score": 0.47117698959976834,
+      "combined_score": 0.3427430968799305
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 3,
+      "text_sha8": "15997d0a",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.7485,
+      "style_score": 0.4947435712431848,
+      "combined_score": 0.6723730713729554
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 4,
+      "text_sha8": "971252b2",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.637,
+      "style_score": 0.4468626430767404,
+      "combined_score": 0.5799587929230221
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 5,
+      "text_sha8": "adc00599",
+      "status": 200,
+      "guess": "ai",
+      "model_score": 0.8528,
+      "style_score": 0.4223525045507832,
+      "combined_score": 0.7236657513652349
+    },
+    {
+      "scenario": "label coverage",
+      "criterion": 3,
+      "index": 6,
+      "text_sha8": "4f05acb7",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.5122,
+      "style_score": 0.4683027421096951,
+      "combined_score": 0.4990308226329085
+    },
+    {
+      "scenario": "appeal path",
+      "criterion": 4,
+      "index": 1,
+      "text_sha8": "74a9a650",
+      "status": 200,
+      "guess": "unsure",
+      "model_score": 0.6227,
+      "style_score": 0.34980844735229033,
+      "combined_score": 0.5408325342056871
+    }
+  ]
+}

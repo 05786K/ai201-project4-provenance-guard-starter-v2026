@@ -64,6 +64,23 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
+def _cpu_ms():
+    """
+    CPU time this request used, in ms — the cost measurement.
+
+    It is the whole PROCESS's CPU time between the start and end of the request
+    (time.process_time), not just the handler thread's. That is deliberate:
+    PyTorch spreads GPT-2 across several threads, and a per-thread clock would
+    miss most of the work. The catch is that it only means "this request's cost"
+    when requests run one at a time. Under concurrent load it also counts the
+    other requests in flight, so read it only from serial runs.
+    """
+    cpu0 = g.get("cpu0")
+    if cpu0 is None:
+        return None
+    return round((time.process_time() - cpu0) * 1000, 2)
+
+
 def build_entry(request_id, request, response, duration_ms) -> dict:
     """Turn one finished request/response pair into a log record."""
     payload = request.get_json(silent=True)
@@ -109,6 +126,7 @@ def build_entry(request_id, request, response, duration_ms) -> dict:
         "combined_score": body.get("combined_score"),
         "model_cold": g.get("model_cold"),
         "stage_ms": g.get("stage_ms"),
+        "cpu_ms": _cpu_ms(),
     }
 
 

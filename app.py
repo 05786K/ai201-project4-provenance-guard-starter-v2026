@@ -51,6 +51,7 @@ app = Flask(__name__)
 def _ops_start():
     g.request_id = ops.new_request_id()
     g.t0 = time.perf_counter()
+    g.cpu0 = time.process_time()  # process-wide CPU; see ops.py on when it is valid
 
 
 @app.after_request

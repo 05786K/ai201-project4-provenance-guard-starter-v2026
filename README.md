@@ -995,27 +995,80 @@ Not attempting: "both run paths" (it needs a hosted deployment).
 
 ## Unit 9 — Running It
 
-**Path B — local with logs.** `RUNNING.md` is the authoritative run path; this section is a summary and will be completed once the instructions have been tested from a clean checkout.
+**Path B — local with logs.** `RUNNING.md` is the full run path. This is the summary.
 
 | Item | Value |
 |---|---|
-| Python | 3.13.13 in the project's `.venv` (the starter supports 3.11, 3.12 and 3.13, not 3.14) |
-| Dependencies | pinned with lower and upper bounds in `requirements.txt` (Flask, Flask-Limiter, requests, transformers, torch, certifi); `waitress` to be added |
-| Model | `gpt2`, about 550 MB, downloaded once into the Hugging Face cache |
-| Start command | TBD (`waitress`; fallback `python app.py` with `AI201_DEBUG=0`) |
-| Clean-checkout test | TBD (what I had to fix in `RUNNING.md` is recorded here) |
+| Python | 3.13.13 (supported: 3.11–3.13, not 3.14) |
+| Dependencies | Pinned in `requirements.txt` with lower and upper bounds: Flask, Flask-Limiter, requests, transformers, torch, waitress, certifi |
+| Model | `gpt2`. Weights file `model.safetensors` is **548,105,171 bytes (about 548 MB)**, cached on first use |
+| Start command | `python serve.py` (waitress, one process, no reloader) |
+| Check | `curl.exe -X POST http://127.0.0.1:5000/ping ...` returns `ok: true` |
+| First request | 5–9 s while GPT-2 loads (varies by run). Later `/submit` calls take about 0.1 s |
+
+**Clean-clone test (commit `da310af`).** I cloned the repo to a new folder with a fresh `.venv`, then followed `RUNNING.md`. Setup, `detector.py`, `serve.py`, `/ping` and both `/submit` calls worked, and the ops log recorded each request. The test found three problems, all fixed in `RUNNING.md`:
+
+- Windows' 260-character path limit broke `pip install` in a deep folder. The doc now says to clone into a short path.
+- A restricted execution policy blocks `Activate.ps1`. The doc now gives a one-line fix and a way to skip activation.
+- The `loss_type` warning from transformers looks like an error in PowerShell. The doc now says it's harmless.
+
+The test reused my machine's model cache, so it did not measure a fresh 548 MB download.
 
 ---
 
 ## Unit 9 — Instrumentation
 
-TBD. This section will hold the ops-log field list and at least ten real entries pasted as text, including at least one rejected or failed request.
+Every request writes one line to `logs/requests.jsonl`, produced by `ops.py::build_entry` and written by `ops.py::write`. Fields:
+
+| Field | What it holds |
+|---|---|
+| `ts`, `request_id`, `method`, `route`, `status`, `outcome` | When, which request, what came back. `outcome` is the guess for a decision, or the error code |
+| `duration_ms` | End-to-end time for the request, measured in `app.py`'s `before_request` and `after_request` hooks |
+| `creator_id`, `text_len`, `text_sha8` | Who sent it, how long the text was, and a short SHA-256 of the text. The raw text is never logged |
+| `content_id`, `model_score`, `style_score`, `combined_score` | The decision, linking to `logs/audit.jsonl` |
+| `model_cold`, `stage_ms`, `cpu_ms` | Whether this request loaded GPT-2, time per stage (`gpt2`, `style`, `scoring`, `audit`), and CPU time |
+
+The session below is the committed run record for step 4: one cold `/submit`, ten warm `/submit` calls, and one rejected request. It was produced by `python serve.py` with default settings, and each request has its own `creator_id`. The `/health` calls are not shown.
+
+```json
+{"ts": "2026-11-10T02:08:01.172+00:00", "request_id": "63f7034504a5", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 8952.41, "creator_id": "cost-cold", "text_len": 368, "text_sha8": "d8040c07", "content_id": "958e730d-3fb5-4985-8d23-d8c6f0b0781e", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 8950.18, "style": 0.3, "scoring": 0.0, "audit": 0.89}, "cpu_ms": 7859.38}
+{"ts": "2026-11-10T02:08:01.268+00:00", "request_id": "e9113cf15be5", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 92.33, "creator_id": "cost-run-01", "text_len": 368, "text_sha8": "d8040c07", "content_id": "7cab0f9b-7051-4682-8dc4-02fcf1b2606f", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": false, "stage_ms": {"gpt2": 90.03, "style": 0.21, "scoring": 0.01, "audit": 1.13}, "cpu_ms": 1281.25}
+{"ts": "2026-11-10T02:08:01.387+00:00", "request_id": "77997b4b01da", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 114.94, "creator_id": "cost-run-02", "text_len": 527, "text_sha8": "81c8a9ae", "content_id": "e689f8f4-a33a-4d59-9517-bf4b531fe307", "model_score": 0.4635, "style_score": 0.4397760702021965, "combined_score": 0.45638282106065897, "model_cold": false, "stage_ms": {"gpt2": 112.67, "style": 0.24, "scoring": 0.0, "audit": 1.07}, "cpu_ms": 1515.62}
+{"ts": "2026-11-10T02:08:01.479+00:00", "request_id": "d8ef84db726e", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 88.28, "creator_id": "cost-run-03", "text_len": 348, "text_sha8": "d7e0bf6d", "content_id": "338170dc-f37e-4d02-958e-fa6fe9a21189", "model_score": 0.5751, "style_score": 0.45761994855822524, "combined_score": 0.5398559845674675, "model_cold": false, "stage_ms": {"gpt2": 86.07, "style": 0.2, "scoring": 0.0, "audit": 1.02}, "cpu_ms": 1328.12}
+{"ts": "2026-11-10T02:08:01.593+00:00", "request_id": "d055b2088eda", "method": "POST", "route": "/submit", "status": 200, "outcome": "human", "duration_ms": 110.47, "creator_id": "cost-run-04", "text_len": 481, "text_sha8": "cc2ff262", "content_id": "e4a7b5b4-0328-4b31-8fc9-38282209e467", "model_score": 0.221, "style_score": 0.4527990387582848, "combined_score": 0.29053971162748543, "model_cold": false, "stage_ms": {"gpt2": 108.1, "style": 0.24, "scoring": 0.01, "audit": 1.18}, "cpu_ms": 1437.5}
+{"ts": "2026-11-10T02:08:01.705+00:00", "request_id": "23c7e76bd2fe", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 108.01, "creator_id": "cost-run-05", "text_len": 459, "text_sha8": "57b98de9", "content_id": "e8c65e0c-82d3-439c-9707-de9e8360bc2a", "model_score": 0.5445, "style_score": 0.5503902496747589, "combined_score": 0.5462670749024277, "model_cold": false, "stage_ms": {"gpt2": 105.74, "style": 0.2, "scoring": 0.0, "audit": 1.16}, "cpu_ms": 1484.38}
+{"ts": "2026-11-10T02:08:01.810+00:00", "request_id": "2f69c3f98ed4", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 101.35, "creator_id": "cost-run-06", "text_len": 406, "text_sha8": "6de12dcb", "content_id": "6de973a2-3bc2-4144-ad4b-1e81848d523d", "model_score": 0.456, "style_score": 0.5520677419595373, "combined_score": 0.4848203225878612, "model_cold": false, "stage_ms": {"gpt2": 98.94, "style": 0.2, "scoring": 0.0, "audit": 1.14}, "cpu_ms": 1140.62}
+{"ts": "2026-11-10T02:08:01.922+00:00", "request_id": "325f6c8a6c5f", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 108.57, "creator_id": "cost-run-07", "text_len": 463, "text_sha8": "ba69c50b", "content_id": "bbf1216a-cfce-4b78-924a-bc2d8dd2349e", "model_score": 0.3446, "style_score": 0.47024747632741204, "combined_score": 0.38229424289822356, "model_cold": false, "stage_ms": {"gpt2": 106.38, "style": 0.21, "scoring": 0.0, "audit": 1.09}, "cpu_ms": 1593.75}
+{"ts": "2026-11-10T02:08:02.035+00:00", "request_id": "52cf4dd21ce8", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 109.18, "creator_id": "cost-run-08", "text_len": 444, "text_sha8": "b818ab58", "content_id": "01cb5f9c-6889-46ed-8264-e3fce5f83149", "model_score": 0.5824, "style_score": 0.523294654018869, "combined_score": 0.5646683962056607, "model_cold": false, "stage_ms": {"gpt2": 106.96, "style": 0.23, "scoring": 0.01, "audit": 1.13}, "cpu_ms": 1500.0}
+{"ts": "2026-11-10T02:08:02.140+00:00", "request_id": "54512fe6b32c", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 101.08, "creator_id": "cost-run-09", "text_len": 450, "text_sha8": "73f84628", "content_id": "29b683fb-473e-430f-9d92-6b6a99ff5c4c", "model_score": 0.4018, "style_score": 0.5335729453668189, "combined_score": 0.4413318836100456, "model_cold": false, "stage_ms": {"gpt2": 99.03, "style": 0.18, "scoring": 0.0, "audit": 0.98}, "cpu_ms": 1390.62}
+{"ts": "2026-11-10T02:08:02.257+00:00", "request_id": "5a205568b57a", "method": "POST", "route": "/submit", "status": 200, "outcome": "unsure", "duration_ms": 113.52, "creator_id": "cost-run-10", "text_len": 474, "text_sha8": "18758163", "content_id": "768b4f08-bf10-45d3-834d-d01a3f8d7c53", "model_score": 0.3353, "style_score": 0.4807926013898646, "combined_score": 0.37894778041695937, "model_cold": false, "stage_ms": {"gpt2": 111.29, "style": 0.2, "scoring": 0.0, "audit": 1.03}, "cpu_ms": 1781.25}
+{"ts": "2026-11-10T02:08:02.262+00:00", "request_id": "6cba8b41c3cb", "method": "POST", "route": "/submit", "status": 422, "outcome": "invalid_text", "duration_ms": 0.63, "creator_id": "cost-reject", "text_len": 0, "text_sha8": "e3b0c442", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": null, "stage_ms": null, "cpu_ms": 0.0}
+```
 
 ---
 
 ## Unit 9 — What It Costs
 
-TBD. This section will hold the measured per-request cost (CPU seconds and wall seconds, averaged over ten runs), how it was measured, and the hundred-a-day arithmetic.
+**Measured cost of one run** (ten warm `/submit` calls, one serial session, `logs/requests.jsonl` lines dated 2026-11-10 02:08:01–02:08:02 UTC):
+
+| | Mean | Std dev | Min | Max |
+|---|---|---|---|---|
+| CPU per run (`cpu_ms`) | **1,445 ms** (1.445 CPU-seconds) | 177 ms | 1,141 ms | 1,781 ms |
+| Wall time per run (`duration_ms`) | **105 ms** | 9 ms | 88 ms | 115 ms |
+
+The cold first request was 8,952 ms wall and 7,859 ms CPU. It's reported separately because it loads the model, so it isn't a per-run cost.
+
+**How it was measured.** `ops.py::_cpu_ms` reads `time.process_time()` at the start and end of each request. That counts CPU for the whole process, including PyTorch's worker threads, which is needed because GPT-2 runs across several threads. The reading is valid as a per-request cost only because these requests ran one at a time. The averages come from `summarize_log.py --since`, which takes the mean of the warm `/submit` lines.
+
+**Caveats.**
+- The CPU figure depends on the machine, an 11th Gen Intel i7-11800H with 8 cores and 16 threads, and on how many threads PyTorch uses.
+- An earlier 12-request development session gave a warm mean of 724 ms CPU and 90 ms wall. I haven't explained that gap, and I'm not using that session's number.
+- No money is spent per run. Electricity isn't measured.
+
+**Hundred-a-day arithmetic.** If 100 people each submit one text a day:
+- CPU: 100 × 1.445 CPU-seconds = **144.5 CPU-seconds a day**, about 2.4 CPU-minutes.
+- Wall: 100 × 0.105 s = **10.5 seconds of model time a day**. Spread over a day, that's about one request every 14 minutes, so the service would sit idle nearly all the time.
+- Money: $0 in API spend. The cost is the local machine and its power.
 
 ---
 

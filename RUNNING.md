@@ -111,9 +111,9 @@ Then check the scoring route:
 curl.exe -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d '{\"text\": \"Technology plays an important role in modern education. Online learning platforms provide students with access to educational resources.\", \"creator_id\": \"me\"}'
 ```
 
-**The first `/submit` after startup is slow: about 5 to 6 seconds.** That is the
-model loading into memory. Later requests take about 0.1 seconds. Plan for it
-when you test.
+**The first `/submit` after startup is slow: about 5 to 9 seconds.** That is the
+model loading into memory. The time varies between runs; we measured 5.3, 5.6 and
+9.0 seconds. Later requests take about 0.1 seconds. Plan for it when you test.
 
 ---
 

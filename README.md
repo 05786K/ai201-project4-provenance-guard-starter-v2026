@@ -230,6 +230,28 @@ $ curl -X POST http://127.0.0.1:5000/appeal -H "Content-Type: application/json" 
 - *What came back:* A HELD or BROKE verdict for each of the 46 attacks I had to judge and a diagnosis grouped by the five stages.
 - *What I changed:* I decided that a missing `creator_id` should fall back to the caller's address and that I would not add a minimum word count in input validation. 
 
+### Unit 9
+
+**Moment 1: criteria review.**
+- *What I asked for:* A check of each criterion I wrote: could someone test it from the sentence alone, would two people score it the same way, and what would make it fail.
+- *What came back:* Gaps in every criterion: unnamed request bodies, undefined pacing, a load test that started cold, a p95 taken from the wrong timer, and a dispatch rate computed from scheduled rather than actual send times.
+- *What I changed:* I wrote the targets and the wording. The assistant flagged gaps and suggested options, and I made the edits. I decided that criterion 4 would stay as written, starting cold.
+
+**Moment 2: the second device.**
+- *What I asked for:* Whether a simulator could stand in for the second laptop that criterion 4 needed.
+- *What came back:* A simulator on the same laptop still shares its CPU, so it fails the criterion's purpose. The options were to change the criterion to a same-machine test or to borrow a second machine.
+- *What I changed:* I chose the same-machine test and rewrote criterion 4 to record the load generator's CPU share.
+
+**Moment 3: diagnosing the failure.**
+- *What I asked for:* Help diagnosing the criterion 4 failures from the server logs, then a fix.
+- *What came back:* A diagnosis of the unlocked model load, and a lock around it.
+- *What I changed:* I checked the traceback against the logs myself. My first draft of the diagnosis was wrong on two points, and I corrected both in the README. I kept the lock, measured it, and stated its trade-offs.
+
+**Moment 4: the next experiments.**
+- *What I asked for:* Which experiment would separate the load wait from steady-state latency, and what to try for a second improvement.
+- *What came back:* A warm-up run, and a thread-count change based on CPU use per request.
+- *What I changed:* I declined both. The second improvement is not built, and the write-up says so.
+
 ---
 
 ## Rate Limiting
@@ -1283,7 +1305,6 @@ Both sets sent 600 requests with no timeouts, at 10.02 requests per second. Both
 3. **The cold start is still slow.** The first request waits 5 to 6 seconds for GPT-2 to load, and concurrent first requests wait for that load too. Before the change, the failing requests also spent about 6 seconds in the GPT-2 stage, which I haven't explained.
 4. **Criterion 4 ran on one machine.** The load generator shares CPU with the server. Its measured share is small, but the second-device version of the test wasn't run, so this is a limit of the result.
 5. **Evidence hygiene.** Server log names repeat across runs, so the criterion 4 rerun overwrote the working-copy logs. The earlier versions are in commit `deeb79d`. The driver should put a timestamp in its log names.
-6. **Unit 9 "How I Used AI" isn't written yet.** It's deferred, as you asked.
 
 ## What I'd do next, and why
 

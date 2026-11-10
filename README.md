@@ -1143,7 +1143,7 @@ A failed request in the log (`app.py::submit` returned 500):
 {"ts": "2026-11-10T03:18:31.199+00:00", "request_id": "712b83700492", "method": "POST", "route": "/submit", "status": 500, "outcome": "http_500", "duration_ms": 6041.75, "creator_id": "load-t1-a1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": true, "stage_ms": {"gpt2": 5882.5}, "cpu_ms": 13046.88}
 ```
 
-The server traceback for that failure, from `results/unit9_runs/server_crit4-t1-a1.log`. It runs from `app.py::submit` through `detector.py::model_signal` and `detector.py::perplexity`:
+The server traceback for the most common failure, from `results/unit9_runs/server_crit4-t1-a1.log` as it was before the change (committed in `deeb79d`). It runs from `app.py::submit` through `detector.py::model_signal` and `detector.py::perplexity` to the `.item()` call:
 
 ```
 File "app.py", line 267, in submit
@@ -1152,14 +1152,50 @@ File "detector.py", line 128, in model_signal
     ppl = perplexity(text)
 File "detector.py", line 113, in perplexity
     return float(math.exp(output.loss.item()))
+  ...
 RuntimeError: Tensor.item() cannot be called on meta tensors
 ```
+
+In 599 of the 600 failures in trial 1 the error surfaced here. In the one other failure, the GPT-2 forward pass itself failed (`detector.py`, line 110, then `modeling_gpt2.py`, line 412, `self.ln_1`, then `torch/nn/functional.py`, line 2993, `layer_norm`) with `RuntimeError: Tensor on device cpu is not on the expected device meta!`. Both errors mean the same thing: the model's weights were on the meta device when the request ran.
 
 **Criterion 5** (`run_unit9.py::crit5_trial`, trial 1 of run `unit9_run_20261109_192356.json`)
 
 ```
 {"trial": 1, "valid": true, "texts": 27, "failing": [], "result": "meets target"}
 {"ts": "2026-11-10T03:24:05.168+00:00", "request_id": "9e79ca3314a9", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 5481.92, "creator_id": "reg-t1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "71de7bc8-7cd9-4325-9a05-dc830f0f8d89", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 5479.13, "style": 0.31, "scoring": 0.0, "audit": 0.84}, "cpu_ms": 6546.88}
+```
+
+### Real output after the change
+
+Trial 1 of each criterion, from the after-change run files in `results/unit9_runs/`. Log lines are written by `ops.py::write`, called from `app.py::_ops_finish`.
+
+**Criterion 1** (`run_unit9.py::crit1_trial`, `unit9_run_20261109_202810.json`)
+
+```
+{"trial": 1, "valid": true, "observed_status": {"200": 12, "429": 3, "422": 3, "413": 2}, "logged_status": {"200": 12, "429": 3, "422": 3, "413": 2}, "limited_window_s": 6.11, "checks": {"new_log_lines_is_20": true, "response_status_distribution": true, "log_status_distribution": true, "request_ids_match_header": true, "required_fields_present": true, "cpu_ms_numeric_for_submit": true, "limited_requests_within_10s": true}, "result": "meets target"}
+```
+
+**Criterion 2** and **criterion 3** (`run_unit9.py::crit23_trial`, `unit9_run_20261109_202821.json`)
+
+```
+{"trial": 1, "valid": true, "cold": {"status": 200, "elapsed_s": 5.512, "result": "meets target"}, "warm": {"p95_ms": 131.44, "samples": 30, "result": "meets target"}}
+{"ts": "2026-11-10T04:28:28.411+00:00", "request_id": "3407ae28b086", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 5508.58, "creator_id": "cold-t1", "text_len": 368, "text_sha8": "d8040c07", "content_id": "3fb54824-ac25-451e-b404-ae8a1ab8b078", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 5506.24, "style": 0.44, "scoring": 0.0, "audit": 1.01}, "cpu_ms": 6687.5}
+{"ts": "2026-11-10T04:28:28.520+00:00", "request_id": "d05acb599887", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 105.03, "creator_id": "warm-t1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "a26b1ce5-1a93-4ab1-8be4-554307a06bf8", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": false, "stage_ms": {"gpt2": 102.29, "style": 0.32, "scoring": 0.01, "audit": 1.34}, "cpu_ms": 1265.62}
+```
+
+**Criterion 4** (`run_unit9.py::load_attempt`, `unit9_run_20261109_202450.json`)
+
+```
+{"trial": 1, "attempt": 1, "valid": true, "dispatch_rate_rps": 10.016, "completed": 600, "timeouts": 0, "non_200": 0, "http_5xx": 0, "bodies_invalid": 0, "p95_latency_ms": 8238.1, "load_generator_cpu_share_pct": 0.257, "result": "misses target"}
+{"ts": "2026-11-10T04:25:00.205+00:00", "request_id": "8eb1c0075aa1", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 8141.95, "creator_id": "load-t1-a1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "c0e1af84-72d5-453c-8e72-3cf15f50968a", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 8137.96, "style": 0.16, "scoring": 0.0, "audit": 2.21}, "cpu_ms": 13406.25}
+```
+
+The first request of that trial now returns 200, but it waited 8.1 seconds, most of it in the GPT-2 stage. Compare the failing request in the before run: 500, with 5.9 seconds in the same stage.
+
+**Criterion 5** (`run_unit9.py::crit5_trial`, `unit9_run_20261109_202857.json`)
+
+```
+{"trial": 1, "valid": true, "texts": 27, "failing": [], "result": "meets target"}
 ```
 
 ### Verdicts
@@ -1176,7 +1212,7 @@ RuntimeError: Tensor.item() cannot be called on meta tensors
 
 **Symptom:** 595–600 of 600 requests per trial returned HTTP 500, and the p95 latency was 15–24 seconds.
 
-**Mechanism:** this test begins with a freshly started server, so the first requests reach `_load()` together. Several threads run the load at the same time, and the model they end up using has its weights on the meta device. `perplexity()` then fails with `RuntimeError: Tensor.item() cannot be called on meta tensors` (`detector.py`, line 113). `app.py::submit` only catches `ValueError`, so the error becomes a 500. The server log shows about 1,190 of these per attempt.
+**Mechanism:** this test begins with a freshly started server, so the first requests reach `_load()` together. Several threads run the load at the same time, and the model they end up using has its weights on the meta device. The forward pass in `perplexity()` runs on those weights, and the failure surfaces either at `.item()` on the loss (`detector.py`, line 113) or inside a layer norm. `app.py::submit` only catches `ValueError`, so each failure becomes a 500. Each failed request produced exactly one traceback: 595 in trial 2 and 592 in trial 3, with 600 in trial 1. (An earlier version of this section said about 1,190 per attempt. That was a count of lines, and each traceback mentions "meta tensors" twice.)
 
 The pattern across trials supports this. In trial 1 the model never produced a 200. In trials 2 and 3 a few requests succeeded, scattered among the failures, which fits a shared model reference that is sometimes replaced by a working copy and sometimes by a broken one. I haven't confirmed this with an isolated test, so treat the exact race as the most likely explanation, not a proven one.
 
@@ -1186,6 +1222,50 @@ The pattern across trials supports this. In trial 1 the model never produced a 2
 
 **Stage and failure mode, in one line:** the first concurrent calls to the unlocked model loader leave the shared model in a state where every scoring call raises, and the route turns that into a 500.
 
+### Diagnosis: criterion 4, after the change
+
+Criterion 4 still misses after the change, on latency alone: p95 is 5.4–8.2 seconds against 2 seconds.
+
+**Component:** the GPT-2 stage of `detector.py::perplexity`, and the queue of requests waiting for it.
+
+**Evidence:** on a warm server a single request spends 102 ms in that stage (criterion 3, the first warm request above). At 10 requests per second, the server needs roughly 10 × 0.105 s ≈ 1.05 seconds of stage time for every second of traffic if it runs one request at a time, so it can't keep up on a single worker. The 8.1-second first request in the after run is the cold load, which the lock now makes every concurrent first request wait for.
+
+**Mechanism (estimated, not tested):** requests queue behind the GPT-2 stage faster than it drains them. The queue grows across the 60-second run, so later requests wait longer. A rough estimate with one request at a time gives a p95 of about 2.8 seconds even with the model already loaded. The measured 5.4–8.2 seconds is higher, which fits the cold load and the queue both adding to the wait.
+
+### The pattern
+
+Both criterion 4 misses trace to the same stage, the GPT-2 model in `detector.py`. The errors before the change came from the model loader racing on that stage. The latency after the change comes from how long that stage takes per request. One component produced both symptoms, and the first fix removed one of them. The second would need more throughput from that stage, which the one-improvement rule doesn't allow here.
+
 ---
+
+## Unit 9 — The Improvement and the Re-run
+
+**The change.** `detector.py::_load()` now takes a lock (`_load_lock`) around the model load. One thread loads GPT-2, and any thread that arrives during the load waits and then uses the finished model. The shared references are assigned only after the model is fully built. Nothing else changed: no scoring code, weights, thresholds or routes.
+
+**Why this change.** It targets the stage and mechanism in the diagnosis: an unsynchronised first load of the shared model.
+
+**Before and after, criterion 4.** The before-change files are `unit9_run_20261109_191824.json` and the server logs in commit `deeb79d`. The rerun overwrote the server logs in the working copy, so use history to read them. The after-change file is `unit9_run_20261109_202450.json`.
+
+| Trial | Before: non-200 | Before: p95 | After: non-200 | After: p95 |
+|---|---|---|---|---|
+| 1 | 600 | 15,048 ms | 0 | 8,238 ms |
+| 2 | 595 | 15,085 ms | 0 | 5,494 ms |
+| 3 | 592 | 23,736 ms | 0 | 5,354 ms |
+
+Both sets sent 600 requests with no timeouts, at 10.02 requests per second. Both are MISSED: the before set on errors and latency, the after set on latency alone.
+
+**The full set, before and after** (three trials each; after-change files are `unit9_run_20261109_202810.json` for criterion 1, `…202821.json` for criteria 2 and 3, `…202450.json` for criterion 4 and `…202857.json` for criterion 5):
+
+| Criterion | Target | Before | After |
+|---|---|---|---|
+| 1. Operational log completeness | 20 of 20 new records per trial | MET ×3 | MET ×3 |
+| 2. Cold start | `detector_loaded: false`, then 200 within 8 s | MET ×3 (5.51–6.02 s) | MET ×3 (5.50–5.52 s) |
+| 3. Warm p95 | ≤ 250 ms over 30 requests | MET ×3 (128–153 ms) | MET ×3 (127–151 ms) |
+| 4. Load and failure behaviour | 0 non-200, p95 ≤ 2,000 ms | MISSED ×3 (592–600 non-200) | MISSED ×3 (0 non-200; p95 5,354–8,238 ms) |
+| 5. Unit 8 scoring regression | 27 texts within ±0.001, labels exact | MET ×3 | MET ×3 (max difference 0.00) |
+
+**Did it help?** For the error, yes. Non-200 responses fell from 592–600 per trial to zero, and criterion 4's failure path is now clean. Criteria 1, 2, 3 and 5 are unchanged, with no cost on any of them, and criterion 5 still matches the Unit 8 scores exactly.
+
+**What it cost, and what it didn't fix.** The lock makes the first requests wait for the model load, about 5 to 6 seconds, and those waits are part of the criterion 4 latency. Criterion 4 still misses: p95 is 5.4–8.2 seconds against the 2-second target. The change removed the errors, not the latency. My working explanation is queueing: the first requests wait behind the load, and at 10 requests per second this machine has little headroom, since each request uses about 0.7–1.4 CPU-seconds. I haven't tested that. A run of criterion 4 after a warm-up request would separate the load wait from steady-state latency, and that's the next thing to check.
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**

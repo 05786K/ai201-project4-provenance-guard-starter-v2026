@@ -42,11 +42,18 @@ for yourself where it lands.
 """
 
 import math
+import threading
 
 import config
 
 _model = None
 _tokenizer = None
+
+# UNIT 9: the server runs several request threads, and on a fresh start several
+# first requests can reach _load() at the same moment. Without this lock each of
+# them built its own copy of GPT-2, and the shared model could end up with its
+# weights still on the meta device (see README, Unit 9, criterion 4).
+_load_lock = threading.Lock()
 
 
 class DetectorUnavailable(RuntimeError):
@@ -54,30 +61,42 @@ class DetectorUnavailable(RuntimeError):
 
 
 def _load():
-    """Load the model once and keep it. First call downloads ~550 MB."""
+    """Load the model once and keep it. First call downloads ~550 MB.
+
+    Thread-safe: one thread loads, the others wait on the lock and then use the
+    finished model. The shared references are set only after the model is fully
+    built, so no thread can see a half-built one.
+    """
     global _model, _tokenizer
     if _model is not None:
         return _model, _tokenizer
 
-    try:
-        import torch  # noqa: F401
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-    except ImportError as exc:
-        raise DetectorUnavailable(
-            f"transformers or torch isn't installed ({exc}).\n"
-            f"Run: pip install -r requirements.txt"
-        ) from exc
+    with _load_lock:
+        if _model is not None:  # another thread finished while this one waited
+            return _model, _tokenizer
 
-    try:
-        _tokenizer = AutoTokenizer.from_pretrained(config.DETECTOR_MODEL)
-        _model = AutoModelForCausalLM.from_pretrained(config.DETECTOR_MODEL)
-        _model.eval()
-    except Exception as exc:  # noqa: BLE001
-        raise DetectorUnavailable(
-            f"Couldn't load '{config.DETECTOR_MODEL}': {exc}\n"
-            f"The first run downloads about 550 MB — check your connection and "
-            f"that you have disk space free."
-        ) from exc
+        try:
+            import torch  # noqa: F401
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+        except ImportError as exc:
+            raise DetectorUnavailable(
+                f"transformers or torch isn't installed ({exc}).\n"
+                f"Run: pip install -r requirements.txt"
+            ) from exc
+
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(config.DETECTOR_MODEL)
+            model = AutoModelForCausalLM.from_pretrained(config.DETECTOR_MODEL)
+            model.eval()
+        except Exception as exc:  # noqa: BLE001
+            raise DetectorUnavailable(
+                f"Couldn't load '{config.DETECTOR_MODEL}': {exc}\n"
+                f"The first run downloads about 550 MB — check your connection and "
+                f"that you have disk space free."
+            ) from exc
+
+        _tokenizer = tokenizer
+        _model = model  # published last
 
     return _model, _tokenizer
 

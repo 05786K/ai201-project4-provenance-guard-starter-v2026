@@ -1,0 +1,49 @@
+{
+  "started": "20261109_202450",
+  "python": "3.13.13",
+  "cpu_count": 16,
+  "criterion_4": [
+    {
+      "trial": 1,
+      "attempt": 1,
+      "valid": true,
+      "dispatch_rate_rps": 10.016,
+      "completed": 600,
+      "timeouts": 0,
+      "non_200": 0,
+      "http_5xx": 0,
+      "bodies_invalid": 0,
+      "p95_latency_ms": 8238.1,
+      "load_generator_cpu_share_pct": 0.257,
+      "result": "misses target"
+    },
+    {
+      "trial": 2,
+      "attempt": 2,
+      "valid": true,
+      "dispatch_rate_rps": 10.016,
+      "completed": 600,
+      "timeouts": 0,
+      "non_200": 0,
+      "http_5xx": 0,
+      "bodies_invalid": 0,
+      "p95_latency_ms": 5493.9,
+      "load_generator_cpu_share_pct": 0.374,
+      "result": "misses target"
+    },
+    {
+      "trial": 3,
+      "attempt": 3,
+      "valid": true,
+      "dispatch_rate_rps": 10.016,
+      "completed": 600,
+      "timeouts": 0,
+      "non_200": 0,
+      "http_5xx": 0,
+      "bodies_invalid": 0,
+      "p95_latency_ms": 5353.9,
+      "load_generator_cpu_share_pct": 0.337,
+      "result": "misses target"
+    }
+  ]
+}

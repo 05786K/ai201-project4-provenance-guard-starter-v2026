@@ -1,0 +1,49 @@
+{
+  "started": "20261109_202821",
+  "python": "3.13.13",
+  "cpu_count": 16,
+  "criteria_2_3": [
+    {
+      "trial": 1,
+      "valid": true,
+      "cold": {
+        "status": 200,
+        "elapsed_s": 5.512,
+        "result": "meets target"
+      },
+      "warm": {
+        "p95_ms": 131.44,
+        "samples": 30,
+        "result": "meets target"
+      }
+    },
+    {
+      "trial": 2,
+      "valid": true,
+      "cold": {
+        "status": 200,
+        "elapsed_s": 5.517,
+        "result": "meets target"
+      },
+      "warm": {
+        "p95_ms": 150.87,
+        "samples": 30,
+        "result": "meets target"
+      }
+    },
+    {
+      "trial": 3,
+      "valid": true,
+      "cold": {
+        "status": 200,
+        "elapsed_s": 5.496,
+        "result": "meets target"
+      },
+      "warm": {
+        "p95_ms": 127.03,
+        "samples": 30,
+        "result": "meets target"
+      }
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "started": "20261109_202810",
+  "python": "3.13.13",
+  "cpu_count": 16,
+  "criterion_1": [
+    {
+      "trial": 1,
+      "valid": true,
+      "observed_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "logged_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "limited_window_s": 6.11,
+      "checks": {
+        "new_log_lines_is_20": true,
+        "response_status_distribution": true,
+        "log_status_distribution": true,
+        "request_ids_match_header": true,
+        "required_fields_present": true,
+        "cpu_ms_numeric_for_submit": true,
+        "limited_requests_within_10s": true
+      },
+      "result": "meets target"
+    },
+    {
+      "trial": 2,
+      "valid": true,
+      "observed_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "logged_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "limited_window_s": 0.73,
+      "checks": {
+        "new_log_lines_is_20": true,
+        "response_status_distribution": true,
+        "log_status_distribution": true,
+        "request_ids_match_header": true,
+        "required_fields_present": true,
+        "cpu_ms_numeric_for_submit": true,
+        "limited_requests_within_10s": true
+      },
+      "result": "meets target"
+    },
+    {
+      "trial": 3,
+      "valid": true,
+      "observed_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "logged_status": {
+        "200": 12,
+        "429": 3,
+        "422": 3,
+        "413": 2
+      },
+      "limited_window_s": 0.8,
+      "checks": {
+        "new_log_lines_is_20": true,
+        "response_status_distribution": true,
+        "log_status_distribution": true,
+        "request_ids_match_header": true,
+        "required_fields_present": true,
+        "cpu_ms_numeric_for_submit": true,
+        "limited_requests_within_10s": true
+      },
+      "result": "meets target"
+    }
+  ]
+}

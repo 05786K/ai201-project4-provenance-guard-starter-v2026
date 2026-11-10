@@ -1,0 +1,28 @@
+{
+  "started": "20261109_192356",
+  "python": "3.13.13",
+  "cpu_count": 16,
+  "criterion_5": [
+    {
+      "trial": 1,
+      "valid": true,
+      "texts": 27,
+      "failing": [],
+      "result": "meets target"
+    },
+    {
+      "trial": 2,
+      "valid": true,
+      "texts": 27,
+      "failing": [],
+      "result": "meets target"
+    },
+    {
+      "trial": 3,
+      "valid": true,
+      "texts": 27,
+      "failing": [],
+      "result": "meets target"
+    }
+  ]
+}

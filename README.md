@@ -1072,4 +1072,120 @@ The cold first request was 8,952 ms wall and 7,859 ms CPU. It's reported separat
 
 ---
 
+## Unit 9 — Run Log and Verdicts
+
+Criteria are in `criteria.md` (Unit 9 section), committed before any results. Three trials per criterion, with the raw JSON and server logs in `results/unit9_runs/`. The driver is `run_unit9.py`.
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. Operational log completeness | 20 of 20 new records per trial, correct status split | met | met | met | **MET** |
+| 2. Cold start | `detector_loaded: false`, then 200 within 8 s | met (5.84 s) | met (5.51 s) | met (6.02 s) | **MET** |
+| 3. Warm p95 | ≤ 250 ms over 30 requests | met (129 ms) | met (128 ms) | met (153 ms) | **MET** |
+| 4. Load and failure behaviour | 600 completed, 0 timeouts, 0 non-200, p95 ≤ 2,000 ms | missed (600 non-200, p95 15,048 ms) | missed (595 non-200, p95 15,085 ms) | missed (592 non-200, p95 23,736 ms) | **MISSED** |
+| 5. Unit 8 scoring regression | 27 texts within ±0.001, labels exact | met (max diff 0.00) | met (max diff 0.00) | met (max diff 0.00) | **MET** |
+
+### Real output
+
+Each block is the driver's printed result for one trial, followed by log lines from that trial. The driver is `run_unit9.py`. Log lines are written by `ops.py::write`, called from `app.py::_ops_finish`. Full JSON for every trial is in `results/unit9_runs/`.
+
+**Criterion 1** (`run_unit9.py::crit1_trial`, trial 1 of run `unit9_run_20261109_191426.json`)
+
+```
+{"trial": 1, "valid": true, "observed_status": {"200": 12, "429": 3, "422": 3, "413": 2}, "logged_status": {"200": 12, "429": 3, "422": 3, "413": 2}, "limited_window_s": 6.56, "checks": {"new_log_lines_is_20": true, "response_status_distribution": true, "log_status_distribution": true, "request_ids_match_header": true, "required_fields_present": true, "cpu_ms_numeric_for_submit": true, "limited_requests_within_10s": true}, "result": "meets target"}
+```
+
+A 200 (`app.py::submit`, ordinary path):
+
+```
+{"ts": "2026-11-10T03:14:34.499+00:00", "request_id": "588c86e7986f", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 94.28, "creator_id": "c1-t1-ok0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "5215cf6b-5b94-4c63-9708-12eb34b8556f", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": false, "stage_ms": {"gpt2": 92.58, "style": 0.2, "scoring": 0.0, "audit": 1.08}, "cpu_ms": 1281.25}
+```
+
+A 422 (`app.py::submit`, empty `text` rejected):
+
+```
+{"ts": "2026-11-10T03:14:35.053+00:00", "request_id": "e2d11f150d77", "method": "POST", "route": "/submit", "status": 422, "outcome": "invalid_text", "duration_ms": 0.8, "creator_id": "c1-t1-bad0", "text_len": 0, "text_sha8": "e3b0c442", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": null, "stage_ms": null, "cpu_ms": 0.0}
+```
+
+A 413 (`app.py::submit`, oversized `text` rejected):
+
+```
+{"ts": "2026-11-10T03:14:35.062+00:00", "request_id": "fdaa4ae7fdbd", "method": "POST", "route": "/submit", "status": 413, "outcome": "text_too_long", "duration_ms": 0.22, "creator_id": "c1-t1-big0", "text_len": 10001, "text_sha8": "6e54d64d", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": null, "stage_ms": null, "cpu_ms": 0.0}
+```
+
+A 429 (the limiter in `app.py`, before `submit` runs):
+
+```
+{"ts": "2026-11-10T03:14:34.395+00:00", "request_id": "9fb93f50f6d5", "method": "POST", "route": "/submit", "status": 429, "outcome": "rate_limited", "duration_ms": 1.25, "creator_id": "log-test-limited-1", "text_len": 463, "text_sha8": "ba69c50b", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": null, "stage_ms": null, "cpu_ms": 0.0}
+```
+
+**Criterion 2** (`run_unit9.py::crit23_trial`, trial 1 of run `unit9_run_20261109_191542.json`). The cold request, which loads the model in `detector.py::_load`:
+
+```
+{"trial": 1, "valid": true, "cold": {"status": 200, "elapsed_s": 5.84, "result": "meets target"}, "warm": {"p95_ms": 129.4, "samples": 30, "result": "meets target"}}
+{"ts": "2026-11-10T03:15:48.882+00:00", "request_id": "33d0a47bd757", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 5819.09, "creator_id": "cold-t1", "text_len": 368, "text_sha8": "d8040c07", "content_id": "c1749f29-86ef-46e7-9b52-37d6cc5eb73c", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 5816.83, "style": 0.36, "scoring": 0.0, "audit": 0.99}, "cpu_ms": 6906.25}
+```
+
+**Criterion 3** (`run_unit9.py::crit23_trial`, the first of the 30 warm requests in the same trial):
+
+```
+{"ts": "2026-11-10T03:15:48.999+00:00", "request_id": "ee1766e27b12", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 99.95, "creator_id": "warm-t1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "7156bf6c-d54f-492e-99da-bbdd0a3dad58", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": false, "stage_ms": {"gpt2": 97.23, "style": 0.19, "scoring": 0.0, "audit": 1.07}, "cpu_ms": 1390.62}
+```
+
+**Criterion 4** (`run_unit9.py::load_attempt`, trial 1 of run `unit9_run_20261109_191824.json`)
+
+```
+{"trial": 1, "attempt": 1, "valid": true, "dispatch_rate_rps": 10.017, "completed": 600, "timeouts": 0, "non_200": 600, "http_5xx": 600, "bodies_invalid": 600, "p95_latency_ms": 15048.1, "load_generator_cpu_share_pct": 0.203, "result": "misses target"}
+```
+
+A failed request in the log (`app.py::submit` returned 500):
+
+```
+{"ts": "2026-11-10T03:18:31.199+00:00", "request_id": "712b83700492", "method": "POST", "route": "/submit", "status": 500, "outcome": "http_500", "duration_ms": 6041.75, "creator_id": "load-t1-a1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": null, "model_score": null, "style_score": null, "combined_score": null, "model_cold": true, "stage_ms": {"gpt2": 5882.5}, "cpu_ms": 13046.88}
+```
+
+The server traceback for that failure, from `results/unit9_runs/server_crit4-t1-a1.log`. It runs from `app.py::submit` through `detector.py::model_signal` and `detector.py::perplexity`:
+
+```
+File "app.py", line 267, in submit
+    model_score = detector.model_signal(text)
+File "detector.py", line 128, in model_signal
+    ppl = perplexity(text)
+File "detector.py", line 113, in perplexity
+    return float(math.exp(output.loss.item()))
+RuntimeError: Tensor.item() cannot be called on meta tensors
+```
+
+**Criterion 5** (`run_unit9.py::crit5_trial`, trial 1 of run `unit9_run_20261109_192356.json`)
+
+```
+{"trial": 1, "valid": true, "texts": 27, "failing": [], "result": "meets target"}
+{"ts": "2026-11-10T03:24:05.168+00:00", "request_id": "9e79ca3314a9", "method": "POST", "route": "/submit", "status": 200, "outcome": "ai", "duration_ms": 5481.92, "creator_id": "reg-t1-0", "text_len": 368, "text_sha8": "d8040c07", "content_id": "71de7bc8-7cd9-4325-9a05-dc830f0f8d89", "model_score": 0.8062, "style_score": 0.5608874019170043, "combined_score": 0.7326062205751012, "model_cold": true, "stage_ms": {"gpt2": 5479.13, "style": 0.31, "scoring": 0.0, "audit": 0.84}, "cpu_ms": 6546.88}
+```
+
+### Verdicts
+
+- **Criterion 1** held in every trial: 20 new records, the expected 12/3/2/3 status split in both the responses and the log, request IDs matching the headers, and `cpu_ms` present on every `/submit` record.
+- **Criterion 2** held in every trial. The model was unloaded before the first request, and that request returned 200 in 5.5–6.0 seconds, under the 8-second limit.
+- **Criterion 3** held in every trial. The 29th of 30 warm durations was 128–153 ms. Trial 3 had one slower request at 266 ms, which the p95 rule doesn't count, but it's reported here.
+- **Criterion 4 missed** in every trial. The driver sent all 600 requests on schedule, with no timeouts. But almost every response was HTTP 500.
+- **Criterion 5** held in every trial. The scores matched the reference exactly, and every label matched.
+
+### Diagnosis: criterion 4
+
+**Component:** the model loader in `detector.py`. `_load()` runs on the first call and has no lock. `perplexity()` then calls `.item()` on the model output.
+
+**Symptom:** 595–600 of 600 requests per trial returned HTTP 500, and the p95 latency was 15–24 seconds.
+
+**Mechanism:** this test begins with a freshly started server, so the first requests reach `_load()` together. Several threads run the load at the same time, and the model they end up using has its weights on the meta device. `perplexity()` then fails with `RuntimeError: Tensor.item() cannot be called on meta tensors` (`detector.py`, line 113). `app.py::submit` only catches `ValueError`, so the error becomes a 500. The server log shows about 1,190 of these per attempt.
+
+The pattern across trials supports this. In trial 1 the model never produced a 200. In trials 2 and 3 a few requests succeeded, scattered among the failures, which fits a shared model reference that is sometimes replaced by a working copy and sometimes by a broken one. I haven't confirmed this with an isolated test, so treat the exact race as the most likely explanation, not a proven one.
+
+**Why criterion 3 didn't catch it:** criterion 3 sends its requests one at a time after a cold start, so the first request loads the model alone. Criterion 4 doesn't wait for the model before starting its load, so it measures what happens when the first requests arrive together. Criterion 4 as written therefore tests cold-start concurrency, and that is where the defect appears.
+
+**Two things I haven't explained:** each failing request spent about 6 seconds in the GPT-2 stage, which I didn't expect from a request that fails immediately. And the p95 numbers include those slow failures, so they describe failures as much as successful latency.
+
+**Stage and failure mode, in one line:** the first concurrent calls to the unlocked model loader leave the shared model in a state where every scoring call raises, and the route turns that into a 500.
+
+---
+
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**

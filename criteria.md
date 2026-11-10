@@ -120,7 +120,7 @@ Generate the three HTTP 429 responses by sending 9 requests within 10 seconds us
 - Trial 2: `log-test-limited-2`
 - Trial 3: `log-test-limited-3`
 
-Use other creator IDs for the remaining requests.
+Of the 9 limited-creator requests, the first 6 return HTTP 200 and count toward the 12 HTTP 200 requests; the other 3 return HTTP 429. The remaining 11 requests use other creator IDs: 6 return HTTP 200, 3 return HTTP 422, and 2 return HTTP 413. Across the batch, that gives 12 HTTP 200, 3 HTTP 422, 2 HTTP 413 and 3 HTTP 429, for 20 requests in total.
 
 For each trial, count only the 20 log lines appended during that trial's batch. Do not include records from previous trials. Do not send any other requests to the application during the batch, including `/health` requests.
 
@@ -160,19 +160,37 @@ The 95th-percentile (`p95`) server-side `duration_ms` must be no greater than 25
 
 ## 4. Load and Failure Behavior
 
-In each of 3 independent trials, send exactly 600 `/submit` requests over 60 seconds at a target rate of 10 requests per second.
+In each of 3 independent valid trials, send exactly 600 `/submit` requests at a target rate of 10 requests per second.
 
-Each request uses one of the "my own writing" texts (indices 1–10), cycling in order. Requests are dispatched at a steady rate—one every 100 ms—rather than in bursts.
+Each request uses one of the "my own writing" texts (indices 1–10), cycling in order. Dispatch requests concurrently at a steady rate of one every 100 ms. Do not wait for an earlier request to complete before dispatching the next request. Allow multiple requests to remain in flight simultaneously.
 
-All 600 requests must return HTTP 200 with valid response bodies. Set the client-side request timeout to 30 seconds. Require zero client-side timeouts, zero HTTP 5xx responses, and client-side p95 latency no greater than 2,000 ms.
+Record the actual client-side send time for every request. Calculate the dispatch rate by dividing the total number of requests sent by the elapsed time between the first and last recorded send times. If the client dispatches fewer than 9.5 requests per second, mark the trial invalid and rerun it. An invalid trial is replaced by its rerun and does not count toward the three required valid trials.
+
+All 600 requests must return HTTP 200 with valid JSON response bodies containing:
+
+- `guess`: one of `human`, `unsure`, or `ai`.
+- `combined_score`: a numeric value between 0 and 1, inclusive.
+
+Set the client-side request timeout to 30 seconds. Require:
+
+- Exactly 600 completed HTTP responses.
+- Zero client-side timeouts.
+- Zero non-200 HTTP responses, including HTTP 5xx responses.
+- Client-side p95 latency no greater than 2,000 ms.
 
 Compute p95 using the nearest-rank method. With 600 completed requests, use the 570th value after sorting the client-side response times in ascending order.
 
 Use a unique `creator_id` for every request to avoid triggering the per-creator rate limit.
 
-Run the load generator from a second device connected to the same local network as the application server. Configure the application to listen on `HOST=0.0.0.0` so the second device can reach it. The server must not be exposed to networks outside the local network during the test. Record the load generator's client-side response times.
+Run the load generator on the same machine as the application server. Measure the load generator's CPU time using Python's `time.process_time()`, which measures user and system CPU time consumed by the current process. Calculate its CPU share as:
 
-**Reason:** Earlier development measurements showed approximately 0.7–1.4 CPU-seconds per request. At 10 requests per second, that implies roughly 7–14 CPU-seconds of work per second. This test examines how the application behaves under that demand, including queueing, latency, and failures. The 10 requests-per-second target represents 10 times the application's defined normal baseline of 1 request per second. Using a second device prevents the load generator's CPU usage from competing with the application server's CPU resources.
+`(load generator process CPU time in seconds / (60 seconds × number of logical CPU cores)) × 100`
+
+Record this percentage for each trial alongside the latency results. CPU share is reported for context and does not determine whether the criterion passes or fails.
+
+**Reason:** Earlier development measurements showed approximately 0.7–1.4 CPU-seconds per request. At 10 requests per second, that implies roughly 7–14 CPU-seconds of work per second. This test examines queueing, latency, and failures under that demand. The 1 request-per-second baseline represents approximately 1.4 CPU-seconds of work per second at the upper observed estimate, a relatively light load on the 16-thread development machine. Recording the load generator's CPU share helps interpret the latency results because it shares the machine's processing resources.
+
+
 
 ## 5. Unit 8 Scoring Regression
 

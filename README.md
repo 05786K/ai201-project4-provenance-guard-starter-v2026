@@ -950,7 +950,7 @@ I'd go toward fewer wrong accusations: raise the AI threshold so "ai" is reserve
 
 # Unit 9 — Capstone
 
-Everything above this line is Units 7 and 8 and is left as submitted. Everything below is new in Unit 9. Entries marked `TBD` are filled in only after the system has actually been run and measured; nothing in those places is an estimate.
+Everything above this line is Units 7 and 8 and is left as submitted. Everything below is new in Unit 9. Entries marked `TBD` are filled in only after the system has actually been run and measured; 
 
 ---
 
@@ -983,11 +983,11 @@ The Unit 7/8 audit log stays the record of *decisions*. The ops log is the recor
 - **No metrics server or dashboard.** No `/metrics` endpoint and no Prometheus. Counts and latency come from reading the ops log back with `summarize_log.py`.
 - **No fixes for the Unit 8 leftovers** (the false positives, `confidence` hard-coded to 0.5, the empty-`reasoning` appeal). Those belong to Unit 8's "What's Still Broken", and the improvements this unit are chosen from this unit's own diagnosis.
 
-**Stretch items I am declaring before building them** (committed before any of them are built):
+**Stretch items I am declaring before building them** :
 
-1. **A second measured improvement** (+2): a second change drawn from the diagnosis, with a third run log in the same table format and a statement of whether it helped.
-2. **A latency breakdown** (+1): where the time goes across the stages of one run, measured, with the numbers here and a sentence on which stage dominates.
-3. **A load observation** (+1): the service run at roughly ten times its normal rate, with a report on what changed.
+1. **A second measured improvement**: a second change drawn from the diagnosis, with a third run log in the same table format and a statement of whether it helped.
+2. **A latency breakdown**: where the time goes across the stages of one run, measured, with the numbers here and a sentence on which stage dominates.
+3. **A load observation**: the service run at roughly ten times its normal rate, with a report on what changed.
 
 Not attempting: "both run paths" (it needs a hosted deployment).
 

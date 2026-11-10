@@ -101,4 +101,4 @@ Every `/submit` request runs GPT-2 locally, so an enormous text costs real compu
 
 # Unit 9 — Capstone
 
-**Everything above this line is Unit 7 and Unit 8 and is left unchanged. From this point forward, this file is about Unit 9.** The five Unit 9 criteria that follow are numbered 1 to 5 on their own, independent of the five above.
+**Everything above this line is Unit 7 and Unit 8 and is left unchanged. From this point forward, this file is about Unit 9.** The five criterias that follow are numbered 1 to 5 on their own, independent of the five above.

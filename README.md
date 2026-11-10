@@ -1268,4 +1268,27 @@ Both sets sent 600 requests with no timeouts, at 10.02 requests per second. Both
 
 **What it cost, and what it didn't fix.** The lock makes the first requests wait for the model load, about 5 to 6 seconds, and those waits are part of the criterion 4 latency. Criterion 4 still misses: p95 is 5.4–8.2 seconds against the 2-second target. The change removed the errors, not the latency. My working explanation is queueing: the first requests wait behind the load, and at 10 requests per second this machine has little headroom, since each request uses about 0.7–1.4 CPU-seconds. I haven't tested that. A run of criterion 4 after a warm-up request would separate the load wait from steady-state latency, and that's the next thing to check.
 
+## Unit 9 — Stretch Items
+
+**Latency breakdown (declared in The Shape).** Measured on the ten serial cost-session requests (`cost-run-01` to `cost-run-10`, 2026-11-10, 02:08 UTC, from `logs/requests.jsonl`). Mean wall time is 104.8 ms: GPT-2 takes 102.5 ms (97.9%), the audit write 1.1 ms (1.0%), stylometry 0.2 ms (0.2%), and scoring under 0.1 ms. **GPT-2 dominates every warm request.**
+
+**Load observation (declared in The Shape).** Criterion 4 is the load observation: 600 requests at 10 per second for 60 seconds, in three trials before and after the change. Before the change, most requests failed with HTTP 500 and p95 was 15–24 seconds. After it, no request failed and p95 was 5.4–8.2 seconds. The load generator ran on the same laptop, and its CPU share was 0.1–0.4%.
+
+**Not built.** The second measured improvement (+2) isn't built. This unit's one improvement is the model-load lock, and a second improvement would need its own diagnosis and a full re-run. Both run paths aren't attempted, as The Shape says.
+
+## Unit 9 — What's Still Broken
+
+1. **Criterion 4's latency still misses.** The target is p95 ≤ 2 seconds, and the best result was 5.4 seconds. One warm request takes about 105 ms, so the server completes roughly 9.5 requests per second when handling them one at a time. The criterion sends 10 per second. A rough estimate with that single-worker model gives a p95 of about 2.8 seconds even with the model already loaded. Reaching 2 seconds would need roughly twice the throughput this laptop provides. I haven't tested the estimate.
+2. **Model errors still return HTTP 500.** `app.py::submit` catches only `ValueError`. The lock prevents the race, but if the model fails for any other reason, the client still gets a 500 rather than a clean 503 with a message. Failures are logged, which meets the failure-logging requirement.
+3. **The cold start is still slow.** The first request waits 5 to 6 seconds for GPT-2 to load, and concurrent first requests wait for that load too. Before the change, the failing requests also spent about 6 seconds in the GPT-2 stage, which I haven't explained.
+4. **Criterion 4 ran on one machine.** The load generator shares CPU with the server. Its measured share is small, but the second-device version of the test wasn't run, so this is a limit of the result.
+5. **Evidence hygiene.** Server log names repeat across runs, so the criterion 4 rerun overwrote the working-copy logs. The earlier versions are in commit `deeb79d`. The driver should put a timestamp in its log names.
+6. **Unit 9 "How I Used AI" isn't written yet.** It's deferred, as you asked.
+
+## What I'd do next, and why
+
+I'd measure the server's throughput ceiling: how many warm requests per second it completes, varied across `AI201_THREADS` values, using the existing driver. That answers whether 2 seconds is reachable on this machine at all. If the ceiling is below 10 requests per second, the target is out of reach with this model on this hardware. The honest result would then be a miss with that reason, not a larger lock.
+
+
+
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**

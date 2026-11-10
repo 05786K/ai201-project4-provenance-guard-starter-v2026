@@ -49,6 +49,22 @@ python detector.py
 `python detector.py` downloads the model the first time (about 550 MB) and scores
 a sample sentence. You only need to do it once per machine.
 
+> **Before you start, two Windows gotchas we hit in a clean-clone test:**
+>
+> - **Keep the clone path short.** Windows refuses files whose full path is over
+>   260 characters, and PyTorch's files are deep in `.venv`. `pip install` fails
+>   with `No such file or directory` if the project sits in a long folder such as
+>   `AppData\Local\Temp\...`. Clone into something like `C:\Users\<you>\ai201`.
+>   Alternatively, enable Windows long-path support, which needs admin rights.
+> - **If `Activate.ps1` is blocked** by the execution policy, allow local scripts
+>   for your account once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+>   Or skip activation and call the environment's Python directly:
+>   `.\.venv\Scripts\python.exe serve.py`.
+>
+> `python detector.py` may also print `` `loss_type=None` was set in the config
+> but it is unrecognized``. It's a harmless transformers notice. PowerShell shows
+> it in red as if it were an error, but the scores still print.
+
 ---
 
 ## Start the service

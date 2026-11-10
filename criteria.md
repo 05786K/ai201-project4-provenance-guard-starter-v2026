@@ -99,6 +99,101 @@ Every `/submit` request runs GPT-2 locally, so an enormous text costs real compu
 
 ---
 
-# Unit 9 — Capstone
+# Unit 9 — Capstone Criteria
 
-**Everything above this line is Unit 7 and Unit 8 and is left unchanged. From this point forward, this file is about Unit 9.** The five criterias that follow are numbered 1 to 5 on their own, independent of the five above.
+**Everything above this line is Unit 7 and Unit 8 and is left unchanged. From this point forward, this file is about Unit 9.** The five criteria that follow are numbered 1 to 5 on their own, independent of the five above.
+
+## 1. Operational Log Completeness
+
+In each of 3 independent trials, send a controlled batch of exactly 20 `/submit` HTTP requests. Each batch must produce exactly 20 new records in `logs/requests.jsonl`, with the following status distribution:
+
+- 12 requests returning HTTP 200
+- 3 requests returning HTTP 422
+- 2 requests returning HTTP 413
+- 3 requests returning HTTP 429
+
+The 12 HTTP 200 requests use texts from `scenarios.py`'s "my own writing" scenario (indices 1–9, repeating as needed). The 3 HTTP 422 requests use an empty `text`. The 2 HTTP 413 requests use `text` of 10,001 `x` characters.
+
+Generate the three HTTP 429 responses by sending 9 requests within 10 seconds using the same limited `creator_id` for that trial, exceeding the 6-per-minute limit. Use a different limited creator ID for each trial:
+
+- Trial 1: `log-test-limited-1`
+- Trial 2: `log-test-limited-2`
+- Trial 3: `log-test-limited-3`
+
+Use other creator IDs for the remaining requests.
+
+For each trial, count only the 20 log lines appended during that trial's batch. Do not include records from previous trials. Do not send any other requests to the application during the batch, including `/health` requests.
+
+Every log record must contain the following fields:
+
+- `ts`
+- `request_id`
+- `route`
+- `status`
+- `outcome`
+- `duration_ms`
+- `cpu_ms`
+
+The `request_id` in each record must match the corresponding response's `X-Request-ID` header. The `cpu_ms` field must be present and contain a numeric value for every `/submit` record, including rejected requests.
+
+**Reason:** Unit 8 exposed that rejected requests were not consistently recorded. Missing records compromise request counts and failure analysis. Requiring CPU time for every request also verifies that rejected requests are included in operational measurements.
+
+## 2. Cold-Start Performance
+
+In each of 3 independent trials, restart the application using the documented Waitress startup command. Before the first `/submit` request, verify that `/health` reports `detector_loaded: false`.
+
+The first `/submit` request after each restart must return HTTP 200 within 8 seconds, measured using client-side wall-clock time.
+
+Each trial restarts the application on the same machine without rebooting it. The model files may therefore remain in the operating system's file cache. This criterion measures an application restart, not a machine reboot.
+
+**Reason:** GPT-2 loads lazily. Previous observations ranged from 5.3 to 9.0 seconds. The 8-second target challenges cold-start performance while confirming that the detector is initially unloaded.
+
+## 3. Warm-Request Performance
+
+In each of 3 independent trials, use the same trial as Criterion 2. Immediately after the cold-start `/submit` request returns HTTP 200, send 30 sequential `/submit` requests using the "my own writing" texts at indices 1, 3, 4, 5, 6, 7, 8, 9 and 10 from `scenarios.py` (index 2 is 527 characters and is excluded), cycled in that order to reach 30 requests.
+
+Use a distinct `creator_id` for each request to avoid triggering the per-creator rate limit. Exclude the initial cold-start request from the measurement.
+
+The 95th-percentile (`p95`) server-side `duration_ms` must be no greater than 250 ms in each trial. Compute p95 using the nearest-rank method: sort the 30 `duration_ms` values in ascending order and use the 29th value.
+
+**Reason:** Previous warm-request measurements showed a p95 of approximately 115 ms. A 250 ms target allows reasonable variation while still detecting meaningful performance regressions.
+
+## 4. Load and Failure Behavior
+
+In each of 3 independent trials, send exactly 600 `/submit` requests over 60 seconds at a target rate of 10 requests per second.
+
+Each request uses one of the "my own writing" texts (indices 1–10), cycling in order. Requests are dispatched at a steady rate—one every 100 ms—rather than in bursts.
+
+All 600 requests must return HTTP 200 with valid response bodies. Set the client-side request timeout to 30 seconds. Require zero client-side timeouts, zero HTTP 5xx responses, and client-side p95 latency no greater than 2,000 ms.
+
+Compute p95 using the nearest-rank method. With 600 completed requests, use the 570th value after sorting the client-side response times in ascending order.
+
+Use a unique `creator_id` for every request to avoid triggering the per-creator rate limit.
+
+Run the load generator from a second device connected to the same local network as the application server. Configure the application to listen on `HOST=0.0.0.0` so the second device can reach it. The server must not be exposed to networks outside the local network during the test. Record the load generator's client-side response times.
+
+**Reason:** Earlier development measurements showed approximately 0.7–1.4 CPU-seconds per request. At 10 requests per second, that implies roughly 7–14 CPU-seconds of work per second. This test examines how the application behaves under that demand, including queueing, latency, and failures. The 10 requests-per-second target represents 10 times the application's defined normal baseline of 1 request per second. Using a second device prevents the load generator's CPU usage from competing with the application server's CPU resources.
+
+## 5. Unit 8 Scoring Regression
+
+In each of 3 independent trials, run all 27 reference texts in `results/unit8_reference_scores.json` through `/submit`.
+
+Each reference entry's `scenario` and `index` fields locate its text in `scenarios.py`; recomputing its SHA-256 and checking the first 8 hex characters match `text_sha8` confirms the right text was found before submitting it.
+
+For every reference text:
+
+- The resulting `combined_score` must be within ±0.001 of its original Unit 8 reference score.
+- The resulting `guess` label must exactly match its original Unit 8 reference label.
+
+Use the same Python version, GPT-2 model revision, PyTorch (`torch`) version, and Transformers version recorded in `results/unit8_environment.txt`.
+
+Create `results/unit8_environment.txt` by running `pip freeze` from the original project `.venv` that produced the Unit 8 reference scores. Add the following two metadata lines manually at the top of the file:
+
+- `python: 3.13.13`
+- `gpt2_revision: 607a30d783dfa663caf39e06633721c8d4cfcd7e`
+
+The regression check must compare the Python version, GPT-2 revision, `torch` version, and `transformers` version. Other package entries in the environment snapshot are retained as supporting environment evidence but are not required to match for this criterion.
+
+A version that does not match invalidates the trial rather than failing the criterion; rerun after restoring the matching environment.
+
+**Reason:** Unit 9 instrumentation should not change the detector's scoring behavior. Verifying the Python, model revision, and scoring-library versions helps ensure that differences in scores are caused by code changes rather than changes to the scoring environment.
